@@ -51,14 +51,6 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        gold: {
-          DEFAULT: "hsl(var(--primary))",
-          glow: "hsl(var(--gold-glow))",
-        },
-        emerald: {
-          DEFAULT: "hsl(var(--accent))",
-          glow: "hsl(var(--emerald-glow))",
-        },
         score: {
           high: "hsl(var(--score-high))",
           mid: "hsl(var(--score-mid))",
