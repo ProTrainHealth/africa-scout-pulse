@@ -62,7 +62,7 @@ const Index = () => {
             </div>
             <h1 className="mb-6 font-display text-4xl font-bold leading-tight tracking-tight md:text-6xl">
               Unbiased Intelligence for{' '}
-              <span className="text-gradient-gold">Africa's Next 50</span>
+              <span className="text-gradient-brand">Africa's Next 50</span>
             </h1>
             <p className="mx-auto mb-8 max-w-xl text-lg text-muted-foreground">
               Scout Scores, catalyst tracking, and institutional flow data on 50 companies
@@ -168,7 +168,7 @@ const Index = () => {
                 key={tier.name}
                 className={`relative rounded-xl border p-6 transition-all ${
                   tier.highlighted
-                    ? 'border-primary/50 bg-card glow-gold'
+                    ? 'border-primary/50 bg-card glow-brand'
                     : 'border-border/50 bg-card/40'
                 }`}
               >
