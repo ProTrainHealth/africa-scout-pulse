@@ -1,21 +1,52 @@
-import { useState, useMemo } from 'react';
-import { Search, Filter, Calendar, TrendingUp, Users, DollarSign } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Search, Filter, Calendar, TrendingUp, Users, DollarSign, Loader2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-import { mockCompanies } from '@/lib/mockData';
-import { SECTORS, COUNTRIES, Sector } from '@/lib/types';
+import { supabase } from '@/integrations/supabase/client';
+import { SECTORS, COUNTRIES, Sector, Company } from '@/lib/types';
 import SectorBadge from '@/components/SectorBadge';
 import ScoutScoreBar from '@/components/ScoutScoreBar';
 import FlowIndicator from '@/components/FlowIndicator';
 
 const Dashboard = () => {
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedSector, setSelectedSector] = useState<Sector | 'All'>('All');
   const [selectedCountry, setSelectedCountry] = useState<string>('All');
   const [sortBy, setSortBy] = useState<'scoutScore' | 'name' | 'cashRunway' | 'catalystDate'>('scoutScore');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      const { data, error } = await supabase.from('companies').select('*');
+      if (error) {
+        console.error('Error fetching companies:', error);
+        setLoading(false);
+        return;
+      }
+      const mapped: Company[] = (data || []).map((row) => ({
+        id: row.id,
+        name: row.name,
+        sector: row.sector as Sector,
+        country: row.country,
+        countryCode: row.country_code,
+        cashRunway: row.cash_runway,
+        insiderOwnership: Number(row.insider_ownership),
+        scoutScore: row.scout_score,
+        nextCatalyst: row.next_catalyst,
+        catalystDate: row.catalyst_date,
+        institutionalFlow: row.institutional_flow as Company['institutionalFlow'],
+        marketCap: row.market_cap,
+        description: row.description,
+      }));
+      setCompanies(mapped);
+      setLoading(false);
+    };
+    fetchCompanies();
+  }, []);
+
   const filtered = useMemo(() => {
-    let result = [...mockCompanies];
+    let result = [...companies];
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(c => c.name.toLowerCase().includes(q) || c.country.toLowerCase().includes(q));
@@ -30,7 +61,7 @@ const Dashboard = () => {
       return dir * (a.scoutScore - b.scoutScore);
     });
     return result;
-  }, [search, selectedSector, selectedCountry, sortBy, sortDir]);
+  }, [search, selectedSector, selectedCountry, sortBy, sortDir, companies]);
 
   const summaryStats = useMemo(() => {
     const avgScore = Math.round(filtered.reduce((s, c) => s + c.scoutScore, 0) / (filtered.length || 1));
@@ -43,6 +74,17 @@ const Dashboard = () => {
     if (sortBy === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortBy(col); setSortDir('desc'); }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex items-center justify-center pt-48">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
