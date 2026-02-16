@@ -1,32 +1,35 @@
 
-# Plan: Seed Database with 50 Mock Companies
 
-## Verification Results
-- **Google Sign-In**: Working -- redirects to Google OAuth page
-- **Apple Sign-In**: Working -- redirects to Apple sign-in page
+# Connect Public Dashboard to Live Database
 
-## Database Seeding
+## Verification: Admin Panel
+- The database contains all **50 companies** (confirmed via query).
+- The admin panel at `/admin` requires authentication to view companies, which is working correctly. When logged in as an admin, all 50 companies will display.
 
-The `companies` table already exists with the correct schema. I will insert all 50 companies from `src/lib/mockData.ts` into the database using the database insert tool.
+## Plan: Connect Dashboard to Database
 
-### Technical Details
+The public dashboard (`/dashboard`) currently imports static data from `mockData.ts`. We need to replace this with a live database query.
 
-**What will happen:**
-- Use the database insert tool to run an `INSERT INTO public.companies` statement with all 50 mock companies
-- Map fields from the mock data to database columns:
-  - `name`, `sector`, `country` -> `name`, `sector`, `country`
-  - `countryCode` -> `country_code`
-  - `cashRunway` -> `cash_runway`
-  - `insiderOwnership` -> `insider_ownership`
-  - `scoutScore` -> `scout_score`
-  - `nextCatalyst` -> `next_catalyst`
-  - `catalystDate` -> `catalyst_date`
-  - `institutionalFlow` -> `institutional_flow`
-  - `marketCap` -> `market_cap`
-  - `description` -> `description`
-- The `id` column will use auto-generated UUIDs (not the mock string IDs)
-- `created_at` and `updated_at` will default to `now()`
+### Changes to `src/pages/Dashboard.tsx`
 
-**No code changes needed** -- this is a data-only operation using the insert tool.
+1. **Remove** the `mockCompanies` import
+2. **Add** a `useEffect` + `useState` to fetch companies from the `companies` table via the database client
+3. **Map** the database column names (snake_case) to the component's expected format (camelCase):
+   - `cash_runway` -> `cashRunway`
+   - `country_code` -> `countryCode`
+   - `insider_ownership` -> `insiderOwnership`
+   - `scout_score` -> `scoutScore`
+   - `next_catalyst` -> `nextCatalyst`
+   - `catalyst_date` -> `catalystDate`
+   - `institutional_flow` -> `institutionalFlow`
+   - `market_cap` -> `marketCap`
+4. **Add** a loading state while data is being fetched
+5. The existing filter/sort logic will continue to work since the data shape remains the same `Company` type
 
-After seeding, the admin panel at `/admin` will display all 50 companies and the public dashboard can be connected to read from the database instead of mock data.
+### Why This Works Without Auth
+The `companies` table has an RLS policy "Anyone can view companies" with `USING (true)` for SELECT, so the public dashboard can read all companies without authentication.
+
+### No Other Files Need Changes
+- `mockData.ts` can remain for reference but will no longer be used by the dashboard
+- All child components (`SectorBadge`, `ScoutScoreBar`, `FlowIndicator`) remain unchanged
+
