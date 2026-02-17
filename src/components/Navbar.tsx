@@ -38,7 +38,7 @@ const Navbar = () => {
             Dashboard
           </Link>
           <Link
-            to="/dashboard"
+            to="/auth"
             className="ml-2 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
           >
             <Shield className="h-4 w-4" />
