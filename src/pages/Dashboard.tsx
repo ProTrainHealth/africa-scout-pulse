@@ -1,13 +1,21 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Calendar, TrendingUp, Users, DollarSign, Loader2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import Paywall from '@/components/Paywall';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/hooks/useSubscription';
 import { SECTORS, COUNTRIES, Sector, Company } from '@/lib/types';
 import SectorBadge from '@/components/SectorBadge';
 import ScoutScoreBar from '@/components/ScoutScoreBar';
 import FlowIndicator from '@/components/FlowIndicator';
 
 const Dashboard = () => {
+  const { user, loading: authLoading } = useAuth();
+  const { isActive, loading: subLoading } = useSubscription();
+  const navigate = useNavigate();
+
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -16,7 +24,16 @@ const Dashboard = () => {
   const [sortBy, setSortBy] = useState<'scoutScore' | 'name' | 'cashRunway' | 'catalystDate'>('scoutScore');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
+  // Redirect unauthenticated users
   useEffect(() => {
+    if (!authLoading && !user) {
+      sessionStorage.setItem('return_to', '/dashboard');
+      navigate('/auth');
+    }
+  }, [authLoading, user, navigate]);
+
+  useEffect(() => {
+    if (!isActive || !user) return;
     const fetchCompanies = async () => {
       const { data, error } = await supabase.from('companies').select('*');
       if (error) {
@@ -43,7 +60,7 @@ const Dashboard = () => {
       setLoading(false);
     };
     fetchCompanies();
-  }, []);
+  }, [isActive, user]);
 
   const filtered = useMemo(() => {
     let result = [...companies];
@@ -74,6 +91,29 @@ const Dashboard = () => {
     if (sortBy === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortBy(col); setSortDir('desc'); }
   };
+
+  if (authLoading || subLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex items-center justify-center pt-48">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  // Show paywall if not subscribed
+  if (!isActive) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="pt-24">
+          <Paywall />
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
