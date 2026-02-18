@@ -24,7 +24,14 @@ const Auth = () => {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate('/admin');
+        // Check return_to intent
+        const returnTo = sessionStorage.getItem('return_to');
+        if (returnTo) {
+          sessionStorage.removeItem('return_to');
+          navigate(returnTo);
+        } else {
+          navigate('/resources');
+        }
       } else {
         const { error } = await supabase.auth.signUp({
           email,
@@ -56,10 +63,10 @@ const Auth = () => {
             <Activity className="h-6 w-6 text-primary" />
           </div>
           <h1 className="font-display text-2xl font-bold">
-            <span className="text-gradient-brand">Omni-Scout</span> Admin
+            <span className="text-gradient-brand">Omni-Scout</span> Africa
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {isLogin ? 'Sign in to the analyst panel' : 'Create an account'}
+            {isLogin ? 'Sign in to your account' : 'Create your free Observer account'}
           </p>
         </div>
 
@@ -69,7 +76,7 @@ const Auth = () => {
             <Input
               id="email"
               type="email"
-              placeholder="analyst@omniscout.africa"
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required

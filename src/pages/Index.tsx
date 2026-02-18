@@ -196,13 +196,16 @@ const Index = () => {
                     </li>
                   ))}
                 </ul>
-                <button className={`mt-6 w-full rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
-                  tier.highlighted
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                    : 'border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                }`}>
+                <Link
+                  to={tier.price === 'Free' ? '/auth' : '/pricing'}
+                  className={`mt-6 block w-full rounded-lg px-4 py-2.5 text-center text-sm font-semibold transition-colors ${
+                    tier.highlighted
+                      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      : 'border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                  }`}
+                >
                   {tier.price === 'Free' ? 'Start Free' : 'Subscribe'}
-                </button>
+                </Link>
               </div>
             ))}
           </div>
