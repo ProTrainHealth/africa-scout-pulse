@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, BarChart3, Lock, Zap } from 'lucide-react';
 import Navbar from '@/components/Navbar';
@@ -6,34 +7,47 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+type BillingInterval = 'monthly' | 'quarterly' | 'yearly';
+
+const billingLabels: Record<BillingInterval, string> = {
+  monthly: 'Monthly',
+  quarterly: 'Quarterly',
+  yearly: 'Yearly',
+};
+
 const tiers = [
   {
     name: 'Observer',
-    price: 'Free',
+    prices: { monthly: 'Free', quarterly: 'Free', yearly: 'Free' },
     description: 'Deep dives, sector theses, and narrative intelligence.',
     features: ['Weekly deep-dive reports', 'Sector thesis publications', 'Public Phantom Portfolio', 'Community access'],
     icon: Eye,
     highlighted: false,
     planKey: null as string | null,
+    amounts: { monthly: 0, quarterly: 0, yearly: 0 },
   },
   {
     name: 'Analyst',
-    price: '$49/mo',
+    prices: { monthly: '$139/mo', quarterly: '$369/qtr', yearly: '$1,299/yr' },
+    savings: { monthly: null, quarterly: '≈ 11% off', yearly: '≈ 22% off' },
     description: 'Full dashboard access with real-time Scout Scores.',
     features: ['Everything in Observer', 'Live company ledger', 'Scout Score tracking', 'Catalyst calendar', 'Institutional flow data'],
     icon: BarChart3,
     highlighted: true,
     planKey: 'analyst',
+    amounts: { monthly: 13900, quarterly: 36900, yearly: 129900 },
   },
   {
     name: 'Boardroom',
-    price: '$299/mo',
+    prices: { monthly: '$449/mo', quarterly: '$1,199/qtr', yearly: '$4,299/yr' },
+    savings: { monthly: null, quarterly: '≈ 11% off', yearly: '≈ 20% off' },
     description: 'Private signal room. Limited to 50 seats.',
-    features: ['Everything in Analyst', 'Private voice notes', 'Management call summaries', 'Monthly video boardroom', 'Direct analyst access'],
+    features: ['Everything in Analyst', 'Private signal room', 'Private voice notes', 'Management call summaries', 'Monthly video boardroom', 'Direct analyst access'],
     icon: Lock,
     highlighted: false,
     limited: true,
     planKey: 'boardroom',
+    amounts: { monthly: 44900, quarterly: 119900, yearly: 429900 },
   },
 ];
 
@@ -42,10 +56,10 @@ const Pricing = () => {
   const { isActive, plan } = useSubscription();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [billing, setBilling] = useState<BillingInterval>('monthly');
 
   const handleTierClick = async (tier: typeof tiers[number]) => {
     if (!tier.planKey) {
-      // Observer — go to auth/signup
       if (!user) {
         navigate('/auth');
       } else {
@@ -55,7 +69,6 @@ const Pricing = () => {
     }
 
     if (!user) {
-      // Store return intent
       sessionStorage.setItem('return_to', '/dashboard');
       navigate('/auth');
       return;
@@ -66,11 +79,9 @@ const Pricing = () => {
       return;
     }
 
-    // Call checkout edge function
     try {
-      const { data: { session } } = await supabase.auth.getSession();
       const res = await supabase.functions.invoke('create-checkout', {
-        body: { plan: tier.planKey, provider: 'paystack' },
+        body: { plan: tier.planKey, provider: 'paystack', interval: billing },
       });
 
       if (res.error) throw new Error(res.error.message);
@@ -90,9 +101,26 @@ const Pricing = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 pb-16 pt-24">
-        <div className="mx-auto mb-12 max-w-lg text-center">
+        <div className="mx-auto mb-8 max-w-lg text-center">
           <h1 className="font-display text-3xl font-bold">Choose Your Intel Level</h1>
           <p className="mt-3 text-muted-foreground">From narrative intelligence to the boardroom.</p>
+        </div>
+
+        {/* Billing toggle */}
+        <div className="mx-auto mb-10 flex max-w-xs items-center justify-center gap-1 rounded-xl border border-border/50 bg-secondary/50 p-1">
+          {(['monthly', 'quarterly', 'yearly'] as BillingInterval[]).map((interval) => (
+            <button
+              key={interval}
+              onClick={() => setBilling(interval)}
+              className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+                billing === interval
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {billingLabels[interval]}
+            </button>
+          ))}
         </div>
 
         <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-3">
@@ -119,7 +147,14 @@ const Pricing = () => {
                 <tier.icon className="h-5 w-5 text-primary" />
               </div>
               <h3 className="font-display text-xl font-bold">{tier.name}</h3>
-              <div className="mt-2 font-display text-3xl font-bold text-primary">{tier.price}</div>
+              <div className="mt-2 font-display text-3xl font-bold text-primary">
+                {tier.prices[billing]}
+              </div>
+              {tier.savings && tier.savings[billing] && (
+                <div className="mt-1 text-xs font-medium text-accent">
+                  {tier.savings[billing]}
+                </div>
+              )}
               <p className="mt-2 text-sm text-muted-foreground">{tier.description}</p>
               <ul className="mt-6 space-y-2">
                 {tier.features.map((f) => (
@@ -139,9 +174,9 @@ const Pricing = () => {
               >
                 {isActive && plan === tier.planKey
                   ? 'Current Plan'
-                  : tier.price === 'Free'
+                  : !tier.planKey
                   ? 'Start Free'
-                  : 'Subscribe'}
+                  : `Upgrade to ${tier.name}`}
               </button>
             </div>
           ))}

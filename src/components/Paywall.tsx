@@ -23,7 +23,7 @@ const Paywall = () => {
             <BarChart3 className="h-5 w-5 text-primary" />
             <h3 className="font-display text-lg font-bold">Analyst</h3>
           </div>
-          <div className="mt-2 font-display text-2xl font-bold text-primary">$49/mo</div>
+          <div className="mt-2 font-display text-2xl font-bold text-primary">From $139/mo</div>
           <ul className="mt-4 space-y-1.5 text-sm text-muted-foreground">
             <li className="flex items-center gap-2"><Zap className="h-3 w-3 text-primary" /> Live company ledger</li>
             <li className="flex items-center gap-2"><Zap className="h-3 w-3 text-primary" /> Scout Score tracking</li>
@@ -34,7 +34,7 @@ const Paywall = () => {
             className="mt-5 w-full"
             onClick={() => navigate('/pricing')}
           >
-            Subscribe <ArrowRight className="ml-1 h-4 w-4" />
+            Upgrade to Analyst <ArrowRight className="ml-1 h-4 w-4" />
           </Button>
         </div>
 
@@ -44,9 +44,10 @@ const Paywall = () => {
             <Lock className="h-5 w-5 text-primary" />
             <h3 className="font-display text-lg font-bold">Boardroom</h3>
           </div>
-          <div className="mt-2 font-display text-2xl font-bold text-primary">$299/mo</div>
+          <div className="mt-2 font-display text-2xl font-bold text-primary">From $449/mo</div>
           <ul className="mt-4 space-y-1.5 text-sm text-muted-foreground">
             <li className="flex items-center gap-2"><Zap className="h-3 w-3 text-primary" /> Everything in Analyst</li>
+            <li className="flex items-center gap-2"><Zap className="h-3 w-3 text-primary" /> Private signal room</li>
             <li className="flex items-center gap-2"><Zap className="h-3 w-3 text-primary" /> Private voice notes</li>
             <li className="flex items-center gap-2"><Zap className="h-3 w-3 text-primary" /> Monthly video boardroom</li>
             <li className="flex items-center gap-2"><Zap className="h-3 w-3 text-primary" /> Direct analyst access</li>
@@ -56,7 +57,7 @@ const Paywall = () => {
             className="mt-5 w-full"
             onClick={() => navigate('/pricing')}
           >
-            Subscribe <ArrowRight className="ml-1 h-4 w-4" />
+            Upgrade to Boardroom <ArrowRight className="ml-1 h-4 w-4" />
           </Button>
         </div>
       </div>

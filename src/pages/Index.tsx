@@ -24,7 +24,7 @@ const tiers = [
   },
   {
     name: 'Analyst',
-    price: '$49/mo',
+    price: 'From $139/mo',
     description: 'Full dashboard access with real-time Scout Scores.',
     features: ['Everything in Observer', 'Live company ledger', 'Scout Score tracking', 'Catalyst calendar', 'Institutional flow data'],
     icon: BarChart3,
@@ -32,9 +32,9 @@ const tiers = [
   },
   {
     name: 'Boardroom',
-    price: '$299/mo',
+    price: 'From $449/mo',
     description: 'Private signal room. Limited to 50 seats.',
-    features: ['Everything in Analyst', 'Private voice notes', 'Management call summaries', 'Monthly video boardroom', 'Direct analyst access'],
+    features: ['Everything in Analyst', 'Private signal room', 'Private voice notes', 'Management call summaries', 'Monthly video boardroom', 'Direct analyst access'],
     icon: Lock,
     highlighted: false,
     limited: true,
@@ -204,7 +204,7 @@ const Index = () => {
                       : 'border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80'
                   }`}
                 >
-                  {tier.price === 'Free' ? 'Start Free' : 'Subscribe'}
+                  {tier.price === 'Free' ? 'Start Free' : `Upgrade to ${tier.name}`}
                 </Link>
               </div>
             ))}

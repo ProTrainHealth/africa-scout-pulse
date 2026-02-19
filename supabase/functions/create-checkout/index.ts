@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
 Deno.serve(async (req) => {
@@ -22,26 +22,35 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     )
 
-    const token = authHeader.replace('Bearer ', '')
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token)
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders })
     }
 
-    const userId = claimsData.claims.sub
-    const userEmail = claimsData.claims.email
+    const userId = user.id
+    const userEmail = user.email
 
-    const { plan, provider } = await req.json()
+    const { plan, provider, interval } = await req.json()
 
     if (!['analyst', 'boardroom'].includes(plan)) {
       return new Response(JSON.stringify({ error: 'Invalid plan' }), { status: 400, headers: corsHeaders })
     }
 
-    const prices: Record<string, number> = { analyst: 4900, boardroom: 29900 }
-    const amount = prices[plan]
+    const validInterval = ['monthly', 'quarterly', 'yearly'].includes(interval) ? interval : 'monthly'
+
+    const prices: Record<string, Record<string, number>> = {
+      analyst: { monthly: 13900, quarterly: 36900, yearly: 129900 },
+      boardroom: { monthly: 44900, quarterly: 119900, yearly: 429900 },
+    }
+    const amount = prices[plan][validInterval]
+
+    const intervalLabels: Record<string, string> = {
+      monthly: 'Monthly',
+      quarterly: 'Quarterly',
+      yearly: 'Yearly',
+    }
 
     if (provider === 'paypal') {
-      // PayPal checkout
       const clientId = Deno.env.get('PAYPAL_CLIENT_ID')
       const clientSecret = Deno.env.get('PAYPAL_CLIENT_SECRET')
 
@@ -49,7 +58,6 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: 'PayPal not configured' }), { status: 500, headers: corsHeaders })
       }
 
-      // Get PayPal access token
       const tokenRes = await fetch('https://api-m.paypal.com/v1/oauth2/token', {
         method: 'POST',
         headers: {
@@ -60,7 +68,6 @@ Deno.serve(async (req) => {
       })
       const tokenData = await tokenRes.json()
 
-      // Create PayPal order
       const orderRes = await fetch('https://api-m.paypal.com/v2/checkout/orders', {
         method: 'POST',
         headers: {
@@ -71,8 +78,8 @@ Deno.serve(async (req) => {
           intent: 'CAPTURE',
           purchase_units: [{
             amount: { currency_code: 'USD', value: (amount / 100).toFixed(2) },
-            description: `Omni-Scout ${plan} subscription`,
-            custom_id: JSON.stringify({ user_id: userId, plan }),
+            description: `Omni-Scout ${plan} subscription (${intervalLabels[validInterval]})`,
+            custom_id: JSON.stringify({ user_id: userId, plan, interval: validInterval }),
           }],
           application_context: {
             return_url: `${req.headers.get('origin') || Deno.env.get('SUPABASE_URL')}/dashboard?payment=success`,
@@ -106,7 +113,7 @@ Deno.serve(async (req) => {
         amount,
         currency: 'USD',
         callback_url: `${req.headers.get('origin') || Deno.env.get('SUPABASE_URL')}/dashboard?payment=success`,
-        metadata: { user_id: userId, plan, custom_fields: [] },
+        metadata: { user_id: userId, plan, interval: validInterval, custom_fields: [] },
       }),
     })
 
