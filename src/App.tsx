@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import Resources from "./pages/Resources";
 import Pricing from "./pages/Pricing";
+import Checkout from "./pages/Checkout";
 import OrderHistory from "./pages/OrderHistory";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +31,7 @@ const App = () => {
           <Route path="/admin" element={<Admin />} />
           <Route path="/resources" element={<Resources />} />
           <Route path="/pricing" element={<Pricing />} />
+          <Route path="/checkout" element={<Checkout />} />
           <Route path="/orders" element={<OrderHistory />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

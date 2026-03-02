@@ -1,13 +1,14 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, BarChart3, Lock, Zap } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import FeatureRequestForm from '@/components/FeatureRequestForm';
 
 type BillingInterval = 'monthly' | 'quarterly' | 'yearly';
+type PaymentProvider = 'paystack' | 'paypal';
 
 const billingLabels: Record<BillingInterval, string> = {
   monthly: 'Monthly',
@@ -15,10 +16,15 @@ const billingLabels: Record<BillingInterval, string> = {
   yearly: 'Yearly',
 };
 
+const providerLabels: Record<PaymentProvider, string> = {
+  paystack: 'Paystack',
+  paypal: 'PayPal',
+};
+
 const tiers = [
   {
     name: 'Observer',
-    prices: { monthly: 'Free', quarterly: 'Free', yearly: 'Free' },
+    prices: { monthly: 'Free', quarterly: 'Free', yearly: 'Free' } as Record<BillingInterval, string>,
     description: 'Deep dives, sector theses, and narrative intelligence.',
     features: ['Weekly deep-dive reports', 'Sector thesis publications', 'Public Phantom Portfolio', 'Community access'],
     icon: Eye,
@@ -28,8 +34,8 @@ const tiers = [
   },
   {
     name: 'Analyst',
-    prices: { monthly: '$139/mo', quarterly: '$369/qtr', yearly: '$1,299/yr' },
-    savings: { monthly: null, quarterly: '≈ 11% off', yearly: '≈ 22% off' },
+    prices: { monthly: '$139/mo', quarterly: '$369/qtr', yearly: '$1,299/yr' } as Record<BillingInterval, string>,
+    savings: { monthly: null, quarterly: '≈ 11% off', yearly: '≈ 22% off' } as Record<BillingInterval, string | null>,
     description: 'Full dashboard access with real-time Scout Scores.',
     features: ['Everything in Observer', 'Live company ledger', 'Scout Score tracking', 'Catalyst calendar', 'Institutional flow data'],
     icon: BarChart3,
@@ -39,8 +45,8 @@ const tiers = [
   },
   {
     name: 'Boardroom',
-    prices: { monthly: '$449/mo', quarterly: '$1,199/qtr', yearly: '$4,299/yr' },
-    savings: { monthly: null, quarterly: '≈ 11% off', yearly: '≈ 20% off' },
+    prices: { monthly: '$449/mo', quarterly: '$1,199/qtr', yearly: '$4,299/yr' } as Record<BillingInterval, string>,
+    savings: { monthly: null, quarterly: '≈ 11% off', yearly: '≈ 20% off' } as Record<BillingInterval, string | null>,
     description: 'Private signal room. Limited to 50 seats.',
     features: ['Everything in Analyst', 'Private signal room', 'Private voice notes', 'Management call summaries', 'Monthly video boardroom', 'Direct analyst access'],
     icon: Lock,
@@ -56,9 +62,30 @@ const Pricing = () => {
   const { isActive, plan } = useSubscription();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [billing, setBilling] = useState<BillingInterval>('monthly');
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const handleTierClick = async (tier: typeof tiers[number]) => {
+  const paramPeriod = searchParams.get('period') as BillingInterval | null;
+  const paramProvider = searchParams.get('provider') as PaymentProvider | null;
+
+  const [billing, setBilling] = useState<BillingInterval>(
+    paramPeriod && ['monthly', 'quarterly', 'yearly'].includes(paramPeriod) ? paramPeriod : 'monthly'
+  );
+  const [provider, setProvider] = useState<PaymentProvider>(
+    paramProvider && ['paystack', 'paypal'].includes(paramProvider)
+      ? paramProvider
+      : (localStorage.getItem('preferred_provider') as PaymentProvider) || 'paystack'
+  );
+
+  // Sync state to URL
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+    params.set('period', billing);
+    params.set('provider', provider);
+    setSearchParams(params, { replace: true });
+    localStorage.setItem('preferred_provider', provider);
+  }, [billing, provider]);
+
+  const handleTierClick = (tier: typeof tiers[number]) => {
     if (!tier.planKey) {
       if (!user) {
         navigate('/auth');
@@ -69,7 +96,7 @@ const Pricing = () => {
     }
 
     if (!user) {
-      sessionStorage.setItem('return_to', '/dashboard');
+      sessionStorage.setItem('return_to', `/pricing?period=${billing}&provider=${provider}`);
       navigate('/auth');
       return;
     }
@@ -79,22 +106,7 @@ const Pricing = () => {
       return;
     }
 
-    try {
-      const res = await supabase.functions.invoke('create-checkout', {
-        body: { plan: tier.planKey, provider: 'paystack', interval: billing },
-      });
-
-      if (res.error) throw new Error(res.error.message);
-      if (res.data?.url) {
-        window.location.href = res.data.url;
-      }
-    } catch (err: any) {
-      toast({
-        title: 'Checkout error',
-        description: err.message || 'Unable to start checkout. Please try again.',
-        variant: 'destructive',
-      });
-    }
+    navigate(`/checkout?provider=${provider}&plan=${tier.planKey}&period=${billing}`);
   };
 
   return (
@@ -107,7 +119,7 @@ const Pricing = () => {
         </div>
 
         {/* Billing toggle */}
-        <div className="mx-auto mb-10 flex max-w-xs items-center justify-center gap-1 rounded-xl border border-border/50 bg-secondary/50 p-1">
+        <div className="mx-auto mb-4 flex max-w-xs items-center justify-center gap-1 rounded-xl border border-border/50 bg-secondary/50 p-1">
           {(['monthly', 'quarterly', 'yearly'] as BillingInterval[]).map((interval) => (
             <button
               key={interval}
@@ -119,6 +131,23 @@ const Pricing = () => {
               }`}
             >
               {billingLabels[interval]}
+            </button>
+          ))}
+        </div>
+
+        {/* Provider toggle */}
+        <div className="mx-auto mb-10 flex max-w-[200px] items-center justify-center gap-1 rounded-xl border border-border/50 bg-secondary/50 p-1">
+          {(['paystack', 'paypal'] as PaymentProvider[]).map((p) => (
+            <button
+              key={p}
+              onClick={() => setProvider(p)}
+              className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+                provider === p
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {providerLabels[p]}
             </button>
           ))}
         </div>
@@ -150,7 +179,7 @@ const Pricing = () => {
               <div className="mt-2 font-display text-3xl font-bold text-primary">
                 {tier.prices[billing]}
               </div>
-              {tier.savings && tier.savings[billing] && (
+              {'savings' in tier && tier.savings && tier.savings[billing] && (
                 <div className="mt-1 text-xs font-medium text-accent">
                   {tier.savings[billing]}
                 </div>
@@ -180,6 +209,12 @@ const Pricing = () => {
               </button>
             </div>
           ))}
+        </div>
+
+        {/* Feature Request */}
+        <div className="mx-auto mt-12 max-w-lg text-center">
+          <p className="mb-3 text-sm text-muted-foreground">Don't see what you need?</p>
+          <FeatureRequestForm />
         </div>
       </div>
     </div>
