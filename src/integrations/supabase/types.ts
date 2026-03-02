@@ -68,6 +68,39 @@ export type Database = {
         }
         Relationships: []
       }
+      feature_requests: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          priority: Database["public"]["Enums"]["feature_request_priority"]
+          status: Database["public"]["Enums"]["feature_request_status"]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          priority?: Database["public"]["Enums"]["feature_request_priority"]
+          status?: Database["public"]["Enums"]["feature_request_status"]
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          priority?: Database["public"]["Enums"]["feature_request_priority"]
+          status?: Database["public"]["Enums"]["feature_request_status"]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -164,6 +197,13 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      feature_request_priority: "low" | "medium" | "high"
+      feature_request_status:
+        | "new"
+        | "in_review"
+        | "accepted"
+        | "rejected"
+        | "done"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -292,6 +332,14 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      feature_request_priority: ["low", "medium", "high"],
+      feature_request_status: [
+        "new",
+        "in_review",
+        "accepted",
+        "rejected",
+        "done",
+      ],
     },
   },
 } as const
