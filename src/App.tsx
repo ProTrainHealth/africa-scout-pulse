@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import Resources from "./pages/Resources";
 import Pricing from "./pages/Pricing";
+import Checkout from "./pages/Checkout";
 import OrderHistory from "./pages/OrderHistory";
 import NotFound from "./pages/NotFound";
 
