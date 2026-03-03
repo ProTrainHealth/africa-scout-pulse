@@ -39,6 +39,11 @@ const Navbar = () => {
         Dashboard
       </Link>
 
+      <Link to="/world-monitor" className={navLinkClass('/world-monitor')} onClick={onNavigate}>
+        <Globe className="h-4 w-4" />
+        World Monitor
+      </Link>
+
       <Link to="/pricing" className={navLinkClass('/pricing')} onClick={onNavigate}>
         Pricing
       </Link>
