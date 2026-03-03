@@ -12,6 +12,7 @@ import Resources from "./pages/Resources";
 import Pricing from "./pages/Pricing";
 import Checkout from "./pages/Checkout";
 import OrderHistory from "./pages/OrderHistory";
+import WorldMonitor from "./pages/WorldMonitor";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => {
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/orders" element={<OrderHistory />} />
+          <Route path="/world-monitor" element={<WorldMonitor />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
