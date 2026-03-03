@@ -10,6 +10,7 @@ import { SECTORS, COUNTRIES, Sector, Company } from '@/lib/types';
 import SectorBadge from '@/components/SectorBadge';
 import ScoutScoreBar from '@/components/ScoutScoreBar';
 import FlowIndicator from '@/components/FlowIndicator';
+import WatchlistButton from '@/components/WatchlistButton';
 
 const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
