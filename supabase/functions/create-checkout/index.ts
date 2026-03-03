@@ -53,12 +53,17 @@ Deno.serve(async (req) => {
     if (provider === 'paypal') {
       const clientId = Deno.env.get('PAYPAL_CLIENT_ID')
       const clientSecret = Deno.env.get('PAYPAL_CLIENT_SECRET')
+      const paypalEnv = Deno.env.get('PAYPAL_ENV') || 'sandbox'
 
       if (!clientId || !clientSecret) {
         return new Response(JSON.stringify({ error: 'PayPal not configured' }), { status: 500, headers: corsHeaders })
       }
 
-      const tokenRes = await fetch('https://api-m.paypal.com/v1/oauth2/token', {
+      const baseUrl = paypalEnv === 'sandbox'
+        ? 'https://api-m.sandbox.paypal.com'
+        : 'https://api-m.paypal.com'
+
+      const tokenRes = await fetch(`${baseUrl}/v1/oauth2/token`, {
         method: 'POST',
         headers: {
           'Authorization': 'Basic ' + btoa(`${clientId}:${clientSecret}`),
@@ -68,7 +73,7 @@ Deno.serve(async (req) => {
       })
       const tokenData = await tokenRes.json()
 
-      const orderRes = await fetch('https://api-m.paypal.com/v2/checkout/orders', {
+      const orderRes = await fetch(`${baseUrl}/v2/checkout/orders`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${tokenData.access_token}`,

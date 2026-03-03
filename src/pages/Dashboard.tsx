@@ -10,6 +10,7 @@ import { SECTORS, COUNTRIES, Sector, Company } from '@/lib/types';
 import SectorBadge from '@/components/SectorBadge';
 import ScoutScoreBar from '@/components/ScoutScoreBar';
 import FlowIndicator from '@/components/FlowIndicator';
+import WatchlistButton from '@/components/WatchlistButton';
 
 const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -218,9 +219,12 @@ const Dashboard = () => {
                   style={{ animationDelay: `${i * 20}ms` }}
                 >
                   <td className="px-4 py-3">
-                    <div>
-                      <div className="font-display font-semibold">{company.name}</div>
-                      <div className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{company.description}</div>
+                    <div className="flex items-start gap-2">
+                      <WatchlistButton companyId={company.id} />
+                      <div>
+                        <div className="font-display font-semibold">{company.name}</div>
+                        <div className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{company.description}</div>
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3"><SectorBadge sector={company.sector} /></td>
