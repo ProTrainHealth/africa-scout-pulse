@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
       })
       const tokenData = await tokenRes.json()
 
-      const orderRes = await fetch('https://api-m.paypal.com/v2/checkout/orders', {
+      const orderRes = await fetch(`${baseUrl}/v2/checkout/orders`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${tokenData.access_token}`,
