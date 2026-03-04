@@ -104,8 +104,8 @@ const Dashboard = () => {
     );
   }
 
-  // Show paywall if not subscribed
-  if (!isActive) {
+  // Show paywall if not subscribed (admin bypasses)
+  if (!isActive && !isAdmin) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
