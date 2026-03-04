@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, BarChart3, Shield, BookOpen, Lock, LogOut, Receipt, User, Menu, X, Globe } from 'lucide-react';
+import { Activity, BarChart3, Shield, BookOpen, Lock, LogOut, Receipt, User, Menu, X, Globe, Star } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useIsMobile } from '@/hooks/use-mobile';
