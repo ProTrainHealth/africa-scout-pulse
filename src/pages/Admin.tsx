@@ -11,6 +11,7 @@ import CompanyForm from '@/components/CompanyForm';
 import ScoutScoreBar from '@/components/ScoutScoreBar';
 import SectorBadge from '@/components/SectorBadge';
 import AdminRequestsQueue from '@/components/AdminRequestsQueue';
+import AdminResourcesManager from '@/components/AdminResourcesManager';
 import type { Sector } from '@/lib/types';
 
 type CompanyRow = {
@@ -118,6 +119,7 @@ const Admin = () => {
         <Tabs defaultValue="companies">
           <TabsList className="mb-6">
             <TabsTrigger value="companies">Companies</TabsTrigger>
+            <TabsTrigger value="resources">Resources</TabsTrigger>
             <TabsTrigger value="requests">Feature Requests</TabsTrigger>
           </TabsList>
 
@@ -178,6 +180,10 @@ const Admin = () => {
                 )}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="resources">
+            <AdminResourcesManager />
           </TabsContent>
 
           <TabsContent value="requests">

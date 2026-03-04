@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.paypal-client-token]
 verify_jwt = false
+
+[functions.resource-signed-url]
+verify_jwt = false
+
+[functions.free-sources-enrich]
+verify_jwt = false

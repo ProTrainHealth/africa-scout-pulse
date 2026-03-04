@@ -16,6 +16,7 @@ type Resource = {
   file_url: string;
   file_type: string;
   published_at: string;
+  storage_path?: string;
 };
 
 const ResourceDetail = () => {
@@ -24,6 +25,8 @@ const ResourceDetail = () => {
   const navigate = useNavigate();
   const [resource, setResource] = useState<Resource | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [urlLoading, setUrlLoading] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) navigate('/auth');
@@ -37,10 +40,31 @@ const ResourceDetail = () => {
       .eq('id', id)
       .maybeSingle()
       .then(({ data }) => {
-        setResource(data as unknown as Resource | null);
+        const r = data as unknown as Resource | null;
+        setResource(r);
         setLoading(false);
+        if (r?.storage_path) {
+          getSignedUrl(r.storage_path);
+        }
       });
   }, [id, user]);
+
+  const getSignedUrl = async (storagePath: string) => {
+    setUrlLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('resource-signed-url', {
+        body: { storage_path: storagePath },
+      });
+      if (!error && data?.url) {
+        setSignedUrl(data.url);
+      }
+    } catch (err) {
+      console.error('Failed to get signed URL:', err);
+    }
+    setUrlLoading(false);
+  };
+
+  const fileUrl = signedUrl || resource?.file_url || null;
 
   if (authLoading || loading) {
     return (
@@ -88,19 +112,26 @@ const ResourceDetail = () => {
           <p className="mt-3 text-muted-foreground max-w-2xl">{resource.summary}</p>
         </div>
 
-        {resource.file_url && resource.file_type === 'pdf' ? (
+        {urlLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <span className="ml-2 text-sm text-muted-foreground">Loading document...</span>
+          </div>
+        ) : fileUrl && resource.file_type === 'pdf' ? (
           <div className="space-y-4">
             <div className="flex gap-3">
               <a
-                href={resource.file_url}
+                href={fileUrl}
                 download
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 <Download className="h-4 w-4" /> Download PDF
               </a>
             </div>
             <iframe
-              src={resource.file_url}
+              src={fileUrl}
               title={resource.title}
               className="w-full rounded-xl border border-border/50"
               style={{ height: '70vh' }}
