@@ -18,9 +18,8 @@ const WorldMonitor = () => {
 
   const isLoading = authLoading || subLoading;
 
-  // Check admin role via subscription hook isn't enough — we check plan or admin
-  // For simplicity: Analyst+ or any active subscription = access
-  const hasAccess = isActive && (plan === 'analyst' || plan === 'boardroom');
+  const { isAdmin } = useAuth();
+  const hasAccess = isAdmin || (isActive && (plan === 'analyst' || plan === 'boardroom'));
 
   if (isLoading) {
     return (

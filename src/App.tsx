@@ -9,13 +9,23 @@ import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import Resources from "./pages/Resources";
+import ResourceDetail from "./pages/ResourceDetail";
 import Pricing from "./pages/Pricing";
 import Checkout from "./pages/Checkout";
 import OrderHistory from "./pages/OrderHistory";
 import WorldMonitor from "./pages/WorldMonitor";
+import Watchlist from "./pages/Watchlist";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => {
   useTimeBasedTheme();
@@ -31,10 +41,12 @@ const App = () => {
           <Route path="/auth" element={<Auth />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/resources" element={<Resources />} />
+          <Route path="/resources/:id" element={<ResourceDetail />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/orders" element={<OrderHistory />} />
           <Route path="/world-monitor" element={<WorldMonitor />} />
+          <Route path="/watchlist" element={<Watchlist />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

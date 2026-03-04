@@ -39,6 +39,13 @@ const Navbar = () => {
         Dashboard
       </Link>
 
+      {user && (
+        <Link to="/watchlist" className={navLinkClass('/watchlist')} onClick={onNavigate}>
+          <Star className="h-4 w-4" />
+          Watchlist
+        </Link>
+      )}
+
       <Link to="/world-monitor" className={navLinkClass('/world-monitor')} onClick={onNavigate}>
         <Globe className="h-4 w-4" />
         World Monitor

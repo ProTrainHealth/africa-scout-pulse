@@ -61,7 +61,7 @@ const Dashboard = () => {
       setLoading(false);
     };
     fetchCompanies();
-  }, [isActive, user]);
+  }, [isActive, isAdmin, user]);
 
   const filtered = useMemo(() => {
     let result = [...companies];

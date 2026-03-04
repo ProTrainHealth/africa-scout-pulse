@@ -1,68 +1,83 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { BookOpen, FileText, TrendingUp, Users, Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { BookOpen, FileText, TrendingUp, Users, Download, ExternalLink, ArrowLeft, Loader2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
-const sections = [
-  {
-    title: 'Weekly Deep-Dive Reports',
-    icon: FileText,
-    description: 'In-depth analysis of key companies and market movements across Africa.',
-    items: [
-      { title: 'Nigeria LNG: Catalyst Watch Q1 2026', date: 'Feb 14, 2026', tag: 'Energy Transition' },
-      { title: 'MTN Group: Scout Score Deep Dive', date: 'Feb 10, 2026', tag: 'Digital Infrastructure' },
-      { title: 'Dangote Refinery: Margin Analysis', date: 'Feb 7, 2026', tag: 'Energy Transition' },
-      { title: 'Safaricom: M-Pesa Expansion Thesis', date: 'Feb 3, 2026', tag: 'Financial Systems' },
-    ],
-  },
-  {
-    title: 'Sector Thesis Publications',
-    icon: BookOpen,
-    description: 'Macro-level narratives on sectors shaping Africa\'s infrastructure future.',
-    items: [
-      { title: 'Energy Transition: The 2026 Inflection Point', date: 'Jan 28, 2026', tag: 'Energy Transition' },
-      { title: 'Strategic Resources: Critical Minerals Race', date: 'Jan 15, 2026', tag: 'Strategic Resources' },
-      { title: 'Digital Infrastructure: Fiber & Data Centers', date: 'Jan 5, 2026', tag: 'Digital Infrastructure' },
-    ],
-  },
-  {
-    title: 'Public Phantom Portfolio',
-    icon: TrendingUp,
-    description: 'Hypothetical portfolio tracking — zero real positions. Pure signal.',
-    items: [
-      { title: 'Phantom Portfolio: February 2026 Update', date: 'Feb 1, 2026', tag: 'Portfolio' },
-      { title: 'Phantom Portfolio: January 2026 Recap', date: 'Jan 31, 2026', tag: 'Portfolio' },
-      { title: 'Phantom Portfolio: 2025 Annual Review', date: 'Dec 31, 2025', tag: 'Portfolio' },
-    ],
-  },
-  {
-    title: 'Community',
-    icon: Users,
-    description: 'Connect with fellow observers tracking Africa\'s next 50.',
-    items: [
-      { title: 'Community Discussion: Q1 2026 Outlook', date: 'Feb 12, 2026', tag: 'Discussion' },
-      { title: 'AMA: Scout Score Methodology Explained', date: 'Feb 5, 2026', tag: 'AMA' },
-    ],
-  },
-];
+type Resource = {
+  id: string;
+  title: string;
+  summary: string;
+  category: string;
+  tag: string;
+  file_url: string;
+  file_type: string;
+  published_at: string;
+};
+
+const categoryMeta: Record<string, { title: string; icon: any; description: string }> = {
+  deep_dive: { title: 'Weekly Deep-Dive Reports', icon: FileText, description: 'In-depth analysis of key companies and market movements across Africa.' },
+  sector_thesis: { title: 'Sector Thesis Publications', icon: BookOpen, description: "Macro-level narratives on sectors shaping Africa's infrastructure future." },
+  phantom_portfolio: { title: 'Public Phantom Portfolio', icon: TrendingUp, description: 'Hypothetical portfolio tracking — zero real positions. Pure signal.' },
+  community: { title: 'Community', icon: Users, description: "Connect with fellow observers tracking Africa's next 50." },
+};
+
+const categoryOrder = ['deep_dive', 'sector_thesis', 'phantom_portfolio', 'community'];
 
 const Resources = () => {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!loading && !user) navigate('/auth');
-  }, [loading, user, navigate]);
+    if (!authLoading && !user) navigate('/auth');
+  }, [authLoading, user, navigate]);
 
-  if (loading) {
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('resources')
+      .select('*')
+      .order('published_at', { ascending: false })
+      .then(({ data }) => {
+        setResources((data as unknown as Resource[]) || []);
+        setLoading(false);
+      });
+  }, [user]);
+
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="flex items-center justify-center pt-48 text-muted-foreground">Loading...</div>
+        <div className="container mx-auto px-4 pb-12 pt-24">
+          <Skeleton className="h-8 w-48 mb-2" />
+          <Skeleton className="h-4 w-72 mb-8" />
+          <div className="space-y-6">
+            {[...Array(3)].map((_, i) => (
+              <div key={i}>
+                <Skeleton className="h-6 w-56 mb-3" />
+                <div className="grid gap-3 md:grid-cols-2">
+                  {[...Array(2)].map((_, j) => <Skeleton key={j} className="h-24 rounded-xl" />)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
+
+  const grouped = categoryOrder
+    .map(cat => ({
+      category: cat,
+      meta: categoryMeta[cat],
+      items: resources.filter(r => r.category === cat),
+    }))
+    .filter(g => g.items.length > 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -76,22 +91,22 @@ const Resources = () => {
         </div>
 
         <div className="space-y-10">
-          {sections.map((section) => (
-            <div key={section.title}>
+          {grouped.map(({ category, meta, items }) => (
+            <div key={category}>
               <div className="mb-4 flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-                  <section.icon className="h-4.5 w-4.5 text-primary" />
+                  <meta.icon className="h-4.5 w-4.5 text-primary" />
                 </div>
                 <div>
-                  <h2 className="font-display text-xl font-bold">{section.title}</h2>
-                  <p className="text-xs text-muted-foreground">{section.description}</p>
+                  <h2 className="font-display text-xl font-bold">{meta.title}</h2>
+                  <p className="text-xs text-muted-foreground">{meta.description}</p>
                 </div>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
-                {section.items.map((item) => (
+                {items.map((item) => (
                   <div
-                    key={item.title}
-                    className="glass-card cursor-pointer rounded-xl p-4 transition-colors hover:bg-secondary/40"
+                    key={item.id}
+                    className="glass-card rounded-xl p-4 transition-colors hover:bg-secondary/40"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="font-display text-sm font-semibold leading-tight">{item.title}</h3>
@@ -99,7 +114,29 @@ const Resources = () => {
                         {item.tag}
                       </span>
                     </div>
-                    <p className="mt-2 text-xs text-muted-foreground">{item.date}</p>
+                    <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{item.summary}</p>
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(item.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                      <div className="flex gap-2">
+                        <Link
+                          to={`/resources/${item.id}`}
+                          className="inline-flex items-center gap-1 rounded-lg bg-secondary px-2.5 py-1 text-xs font-medium text-foreground hover:bg-secondary/80 transition-colors"
+                        >
+                          <ExternalLink className="h-3 w-3" /> Open
+                        </Link>
+                        {item.file_type === 'pdf' && item.file_url && (
+                          <a
+                            href={item.file_url}
+                            download
+                            className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+                          >
+                            <Download className="h-3 w-3" /> Download
+                          </a>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
