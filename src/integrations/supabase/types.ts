@@ -125,6 +125,42 @@ export type Database = {
         }
         Relationships: []
       }
+      resources: {
+        Row: {
+          category: string
+          created_at: string
+          file_type: string
+          file_url: string
+          id: string
+          published_at: string
+          summary: string
+          tag: string
+          title: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          file_type?: string
+          file_url?: string
+          id?: string
+          published_at?: string
+          summary?: string
+          tag?: string
+          title: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          file_type?: string
+          file_url?: string
+          id?: string
+          published_at?: string
+          summary?: string
+          tag?: string
+          title?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           created_at: string
