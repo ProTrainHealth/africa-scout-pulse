@@ -13,7 +13,7 @@ import FlowIndicator from '@/components/FlowIndicator';
 import WatchlistButton from '@/components/WatchlistButton';
 
 const Dashboard = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const { isActive, loading: subLoading } = useSubscription();
   const navigate = useNavigate();
 
