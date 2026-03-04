@@ -34,7 +34,7 @@ const Dashboard = () => {
   }, [authLoading, user, navigate]);
 
   useEffect(() => {
-    if (!isActive || !user) return;
+    if ((!isActive && !isAdmin) || !user) return;
     const fetchCompanies = async () => {
       const { data, error } = await supabase.from('companies').select('*');
       if (error) {
