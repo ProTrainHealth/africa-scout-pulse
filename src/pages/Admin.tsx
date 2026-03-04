@@ -11,6 +11,7 @@ import CompanyForm from '@/components/CompanyForm';
 import ScoutScoreBar from '@/components/ScoutScoreBar';
 import SectorBadge from '@/components/SectorBadge';
 import AdminRequestsQueue from '@/components/AdminRequestsQueue';
+import AdminResourcesManager from '@/components/AdminResourcesManager';
 import type { Sector } from '@/lib/types';
 
 type CompanyRow = {
