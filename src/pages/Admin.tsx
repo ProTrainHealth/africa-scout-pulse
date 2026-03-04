@@ -182,6 +182,10 @@ const Admin = () => {
             )}
           </TabsContent>
 
+          <TabsContent value="resources">
+            <AdminResourcesManager />
+          </TabsContent>
+
           <TabsContent value="requests">
             {(isActive || isAdmin) ? (
               <AdminRequestsQueue />
