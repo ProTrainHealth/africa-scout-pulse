@@ -119,6 +119,7 @@ const Admin = () => {
         <Tabs defaultValue="companies">
           <TabsList className="mb-6">
             <TabsTrigger value="companies">Companies</TabsTrigger>
+            <TabsTrigger value="resources">Resources</TabsTrigger>
             <TabsTrigger value="requests">Feature Requests</TabsTrigger>
           </TabsList>
 
