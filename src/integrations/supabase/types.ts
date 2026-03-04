@@ -68,6 +68,38 @@ export type Database = {
         }
         Relationships: []
       }
+      company_enrichment: {
+        Row: {
+          company_id: string
+          data: Json
+          id: string
+          last_updated_at: string
+          source: string
+        }
+        Insert: {
+          company_id: string
+          data?: Json
+          id?: string
+          last_updated_at?: string
+          source?: string
+        }
+        Update: {
+          company_id?: string
+          data?: Json
+          id?: string
+          last_updated_at?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_enrichment_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feature_requests: {
         Row: {
           created_at: string
@@ -133,6 +165,7 @@ export type Database = {
           file_url: string
           id: string
           published_at: string
+          storage_path: string | null
           summary: string
           tag: string
           title: string
@@ -144,6 +177,7 @@ export type Database = {
           file_url?: string
           id?: string
           published_at?: string
+          storage_path?: string | null
           summary?: string
           tag?: string
           title: string
@@ -155,6 +189,7 @@ export type Database = {
           file_url?: string
           id?: string
           published_at?: string
+          storage_path?: string | null
           summary?: string
           tag?: string
           title?: string
