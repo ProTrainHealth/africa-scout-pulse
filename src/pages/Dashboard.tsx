@@ -13,7 +13,7 @@ import FlowIndicator from '@/components/FlowIndicator';
 import WatchlistButton from '@/components/WatchlistButton';
 
 const Dashboard = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const { isActive, loading: subLoading } = useSubscription();
   const navigate = useNavigate();
 
@@ -34,7 +34,7 @@ const Dashboard = () => {
   }, [authLoading, user, navigate]);
 
   useEffect(() => {
-    if (!isActive || !user) return;
+    if ((!isActive && !isAdmin) || !user) return;
     const fetchCompanies = async () => {
       const { data, error } = await supabase.from('companies').select('*');
       if (error) {
@@ -61,7 +61,7 @@ const Dashboard = () => {
       setLoading(false);
     };
     fetchCompanies();
-  }, [isActive, user]);
+  }, [isActive, isAdmin, user]);
 
   const filtered = useMemo(() => {
     let result = [...companies];
@@ -104,8 +104,8 @@ const Dashboard = () => {
     );
   }
 
-  // Show paywall if not subscribed
-  if (!isActive) {
+  // Show paywall if not subscribed (admin bypasses)
+  if (!isActive && !isAdmin) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
