@@ -59,11 +59,7 @@ const Pricing = () => {
   const [billing, setBilling] = useState<BillingInterval>(
     paramPeriod && ['monthly', 'quarterly', 'yearly'].includes(paramPeriod) ? paramPeriod : 'monthly'
   );
-  const [provider, setProvider] = useState<PaymentProvider>(
-    paramProvider && ['paystack', 'paypal'].includes(paramProvider)
-      ? paramProvider
-      : (localStorage.getItem('preferred_provider') as PaymentProvider) || 'paystack'
-  );
+  const provider: PaymentProvider = 'paypal';
 
   // Sync state to URL
   useEffect(() => {
@@ -71,8 +67,7 @@ const Pricing = () => {
     params.set('period', billing);
     params.set('provider', provider);
     setSearchParams(params, { replace: true });
-    localStorage.setItem('preferred_provider', provider);
-  }, [billing, provider]);
+  }, [billing]);
 
   const handleTierClick = (tier: typeof tiers[number]) => {
     if (!tier.planKey) {
