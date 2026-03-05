@@ -23,8 +23,10 @@ const WorldMonitor = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="flex items-center justify-center pt-48">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="container mx-auto px-4 pt-20">
+          <Skeleton className="h-7 w-64 mb-2" />
+          <Skeleton className="h-4 w-96 mb-4" />
+          <Skeleton className="h-[60vh] w-full rounded-xl" />
         </div>
       </div>
     );
