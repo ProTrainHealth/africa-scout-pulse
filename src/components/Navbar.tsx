@@ -61,6 +61,10 @@ const Navbar = () => {
             <Receipt className="h-4 w-4" />
             Orders
           </Link>
+          <Link to="/settings" className={navLinkClass('/settings')} onClick={onNavigate}>
+            <Settings className="h-4 w-4" />
+            Settings
+          </Link>
           <div className="flex items-center gap-2 rounded-lg border border-border/50 bg-secondary/50 px-3 py-1.5">
             <User className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="max-w-[120px] truncate text-xs text-muted-foreground">{user.email}</span>

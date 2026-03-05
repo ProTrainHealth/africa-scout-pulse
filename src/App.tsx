@@ -48,6 +48,7 @@ const App = () => {
           <Route path="/orders" element={<OrderHistory />} />
           <Route path="/world-monitor" element={<WorldMonitor />} />
           <Route path="/watchlist" element={<Watchlist />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
