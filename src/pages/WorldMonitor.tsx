@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Globe, ExternalLink, Lock, Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
