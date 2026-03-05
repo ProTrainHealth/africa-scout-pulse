@@ -10,15 +10,13 @@ const WORLD_MONITOR_URL =
   'https://finance.worldmonitor.app/?lat=20.0000&lon=0.0000&zoom=1.00&view=global&timeRange=7d&layers=cables%2Cpipelines%2Csanctions%2Cweather%2Ceconomic%2Cwaterways%2Coutages%2Cnatural%2CtradeRoutes';
 
 const WorldMonitor = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const { isActive, plan, loading: subLoading } = useSubscription();
   const navigate = useNavigate();
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [iframeError, setIframeError] = useState(false);
 
   const isLoading = authLoading || subLoading;
-
-  const { isAdmin } = useAuth();
   const hasAccess = isAdmin || (isActive && (plan === 'analyst' || plan === 'boardroom'));
 
   if (isLoading) {
