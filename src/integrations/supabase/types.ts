@@ -139,6 +139,7 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
+          timezone: string | null
           user_id: string
         }
         Insert: {
@@ -146,6 +147,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          timezone?: string | null
           user_id: string
         }
         Update: {
@@ -153,6 +155,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          timezone?: string | null
           user_id?: string
         }
         Relationships: []

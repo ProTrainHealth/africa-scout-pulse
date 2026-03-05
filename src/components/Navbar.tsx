@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, BarChart3, Shield, BookOpen, Lock, LogOut, Receipt, User, Menu, X, Globe, Star } from 'lucide-react';
+import { Activity, BarChart3, Shield, BookOpen, Lock, LogOut, Receipt, User, Menu, X, Globe, Star, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -60,6 +60,10 @@ const Navbar = () => {
           <Link to="/orders" className={navLinkClass('/orders')} onClick={onNavigate}>
             <Receipt className="h-4 w-4" />
             Orders
+          </Link>
+          <Link to="/settings" className={navLinkClass('/settings')} onClick={onNavigate}>
+            <Settings className="h-4 w-4" />
+            Settings
           </Link>
           <div className="flex items-center gap-2 rounded-lg border border-border/50 bg-secondary/50 px-3 py-1.5">
             <User className="h-3.5 w-3.5 text-muted-foreground" />

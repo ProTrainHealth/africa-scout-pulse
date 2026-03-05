@@ -15,6 +15,7 @@ import Checkout from "./pages/Checkout";
 import OrderHistory from "./pages/OrderHistory";
 import WorldMonitor from "./pages/WorldMonitor";
 import Watchlist from "./pages/Watchlist";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -47,6 +48,7 @@ const App = () => {
           <Route path="/orders" element={<OrderHistory />} />
           <Route path="/world-monitor" element={<WorldMonitor />} />
           <Route path="/watchlist" element={<Watchlist />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

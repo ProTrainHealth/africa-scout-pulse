@@ -28,7 +28,7 @@ const Checkout = () => {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
-  const provider = params.get('provider') || 'paystack';
+  const provider = 'paypal';
   const plan = params.get('plan') || 'analyst';
   const period = (params.get('period') || 'monthly') as BillingInterval;
 
@@ -41,30 +41,9 @@ const Checkout = () => {
       return;
     }
     if (user) {
-      if (provider === 'paypal') {
-        initPayPal();
-      } else {
-        // For Paystack, redirect directly via create-checkout
-        handlePaystackCheckout();
-      }
+      setStatus('ready');
     }
   }, [user, authLoading]);
-
-  const handlePaystackCheckout = async () => {
-    try {
-      const res = await supabase.functions.invoke('create-checkout', {
-        body: { plan, provider: 'paystack', interval: period },
-      });
-      if (res.error) throw new Error(res.error.message);
-      if (res.data?.url) {
-        window.location.href = res.data.url;
-      }
-    } catch (err: any) {
-      setStatus('error');
-      setErrorMsg(err.message || 'Unable to start checkout');
-    }
-  };
-
   const initPayPal = async () => {
     try {
       // Create order via existing create-checkout function
@@ -141,32 +120,25 @@ const Checkout = () => {
 
           {/* Payment action */}
           <div className="mt-6">
-            {provider === 'paypal' ? (
-              <div className="space-y-4">
-                {status === 'error' && (
-                  <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-                    <AlertCircle className="mb-1 inline h-4 w-4" /> {errorMsg}
-                  </div>
+            <div className="space-y-4">
+              {status === 'error' && (
+                <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+                  <AlertCircle className="mb-1 inline h-4 w-4" /> {errorMsg}
+                </div>
+              )}
+              <Button
+                onClick={handlePayPalCheckout}
+                disabled={status === 'processing'}
+                className="w-full bg-[hsl(210,80%,50%)] hover:bg-[hsl(210,80%,45%)] text-white"
+                size="lg"
+              >
+                {status === 'processing' ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
+                ) : (
+                  'Pay with PayPal'
                 )}
-                <Button
-                  onClick={handlePayPalCheckout}
-                  disabled={status === 'processing'}
-                  className="w-full bg-[hsl(210,80%,50%)] hover:bg-[hsl(210,80%,45%)] text-white"
-                  size="lg"
-                >
-                  {status === 'processing' ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
-                  ) : (
-                    'Pay with PayPal'
-                  )}
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                <span className="ml-2 text-sm text-muted-foreground">Redirecting to Paystack...</span>
-              </div>
-            )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
