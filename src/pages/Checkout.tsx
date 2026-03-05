@@ -28,7 +28,7 @@ const Checkout = () => {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
-  const provider = params.get('provider') || 'paystack';
+  const provider = 'paypal';
   const plan = params.get('plan') || 'analyst';
   const period = (params.get('period') || 'monthly') as BillingInterval;
 
@@ -41,30 +41,9 @@ const Checkout = () => {
       return;
     }
     if (user) {
-      if (provider === 'paypal') {
-        initPayPal();
-      } else {
-        // For Paystack, redirect directly via create-checkout
-        handlePaystackCheckout();
-      }
+      setStatus('ready');
     }
   }, [user, authLoading]);
-
-  const handlePaystackCheckout = async () => {
-    try {
-      const res = await supabase.functions.invoke('create-checkout', {
-        body: { plan, provider: 'paystack', interval: period },
-      });
-      if (res.error) throw new Error(res.error.message);
-      if (res.data?.url) {
-        window.location.href = res.data.url;
-      }
-    } catch (err: any) {
-      setStatus('error');
-      setErrorMsg(err.message || 'Unable to start checkout');
-    }
-  };
-
   const initPayPal = async () => {
     try {
       // Create order via existing create-checkout function
