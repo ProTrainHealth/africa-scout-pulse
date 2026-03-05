@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
-import { BookOpen, FileText, TrendingUp, Users, Download, ExternalLink, ArrowLeft, Loader2 } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { BookOpen, FileText, TrendingUp, Users, Download, ExternalLink, Loader2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
 
 type Resource = {
   id: string;
@@ -16,6 +15,7 @@ type Resource = {
   file_url: string;
   file_type: string;
   published_at: string;
+  storage_path?: string;
 };
 
 const categoryMeta: Record<string, { title: string; icon: any; description: string }> = {
@@ -32,6 +32,7 @@ const Resources = () => {
   const navigate = useNavigate();
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) navigate('/auth');
@@ -48,6 +49,32 @@ const Resources = () => {
         setLoading(false);
       });
   }, [user]);
+
+  const handleDownload = useCallback(async (item: Resource) => {
+    if (!item.storage_path) {
+      // Fallback to file_url
+      if (item.file_url) window.open(item.file_url, '_blank');
+      return;
+    }
+    setDownloadingId(item.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('resource-signed-url', {
+        body: { storage_path: item.storage_path },
+      });
+      if (!error && data?.url) {
+        const a = document.createElement('a');
+        a.href = data.url;
+        a.download = item.title + '.pdf';
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (err) {
+      console.error('Download failed:', err);
+    }
+    setDownloadingId(null);
+  }, []);
 
   if (authLoading || loading) {
     return (
@@ -90,6 +117,14 @@ const Resources = () => {
           </p>
         </div>
 
+        {grouped.length === 0 && (
+          <div className="py-16 text-center">
+            <FileText className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
+            <p className="font-display font-semibold">No resources yet</p>
+            <p className="mt-1 text-sm text-muted-foreground">Check back soon for new publications.</p>
+          </div>
+        )}
+
         <div className="space-y-10">
           {grouped.map(({ category, meta, items }) => (
             <div key={category}>
@@ -126,14 +161,19 @@ const Resources = () => {
                         >
                           <ExternalLink className="h-3 w-3" /> Open
                         </Link>
-                        {item.file_type === 'pdf' && item.file_url && (
-                          <a
-                            href={item.file_url}
-                            download
-                            className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+                        {item.file_type === 'pdf' && (item.storage_path || item.file_url) && (
+                          <button
+                            onClick={() => handleDownload(item)}
+                            disabled={downloadingId === item.id}
+                            className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
                           >
-                            <Download className="h-3 w-3" /> Download
-                          </a>
+                            {downloadingId === item.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Download className="h-3 w-3" />
+                            )}
+                            Download
+                          </button>
                         )}
                       </div>
                     </div>
