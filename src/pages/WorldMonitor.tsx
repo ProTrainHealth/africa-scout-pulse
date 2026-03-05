@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Globe, ExternalLink, Lock, Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -10,23 +11,23 @@ const WORLD_MONITOR_URL =
   'https://finance.worldmonitor.app/?lat=20.0000&lon=0.0000&zoom=1.00&view=global&timeRange=7d&layers=cables%2Cpipelines%2Csanctions%2Cweather%2Ceconomic%2Cwaterways%2Coutages%2Cnatural%2CtradeRoutes';
 
 const WorldMonitor = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const { isActive, plan, loading: subLoading } = useSubscription();
   const navigate = useNavigate();
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [iframeError, setIframeError] = useState(false);
 
   const isLoading = authLoading || subLoading;
-
-  const { isAdmin } = useAuth();
   const hasAccess = isAdmin || (isActive && (plan === 'analyst' || plan === 'boardroom'));
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="flex items-center justify-center pt-48">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="container mx-auto px-4 pt-20">
+          <Skeleton className="h-7 w-64 mb-2" />
+          <Skeleton className="h-4 w-96 mb-4" />
+          <Skeleton className="h-[60vh] w-full rounded-xl" />
         </div>
       </div>
     );

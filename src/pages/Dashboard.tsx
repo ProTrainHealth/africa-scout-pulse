@@ -11,6 +11,25 @@ import SectorBadge from '@/components/SectorBadge';
 import ScoutScoreBar from '@/components/ScoutScoreBar';
 import FlowIndicator from '@/components/FlowIndicator';
 import WatchlistButton from '@/components/WatchlistButton';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const DashboardSkeleton = () => (
+  <div className="container mx-auto px-4 pb-12 pt-24">
+    <Skeleton className="h-8 w-64 mb-2" />
+    <Skeleton className="h-4 w-96 mb-6" />
+    <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+      {[...Array(4)].map((_, i) => (
+        <Skeleton key={i} className="h-20 rounded-xl" />
+      ))}
+    </div>
+    <Skeleton className="h-10 w-full mb-4 rounded-lg" />
+    <div className="space-y-2">
+      {[...Array(8)].map((_, i) => (
+        <Skeleton key={i} className="h-14 w-full rounded-lg" />
+      ))}
+    </div>
+  </div>
+);
 
 const Dashboard = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -24,8 +43,8 @@ const Dashboard = () => {
   const [selectedCountry, setSelectedCountry] = useState<string>('All');
   const [sortBy, setSortBy] = useState<'scoutScore' | 'name' | 'cashRunway' | 'catalystDate'>('scoutScore');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Redirect unauthenticated users
   useEffect(() => {
     if (!authLoading && !user) {
       sessionStorage.setItem('return_to', '/dashboard');
@@ -58,6 +77,7 @@ const Dashboard = () => {
         description: row.description,
       }));
       setCompanies(mapped);
+      setLastUpdated(new Date());
       setLoading(false);
     };
     fetchCompanies();
@@ -97,21 +117,16 @@ const Dashboard = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="flex items-center justify-center pt-48">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <DashboardSkeleton />
       </div>
     );
   }
 
-  // Show paywall if not subscribed (admin bypasses)
   if (!isActive && !isAdmin) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="pt-24">
-          <Paywall />
-        </div>
+        <div className="pt-24"><Paywall /></div>
       </div>
     );
   }
@@ -120,9 +135,7 @@ const Dashboard = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="flex items-center justify-center pt-48">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <DashboardSkeleton />
       </div>
     );
   }
@@ -135,6 +148,11 @@ const Dashboard = () => {
           <h1 className="font-display text-3xl font-bold">Live Intelligence Ledger</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             50 companies critical to Africa's infrastructure future • Updated in real-time
+            {lastUpdated && (
+              <span className="ml-2 text-xs opacity-60">
+                • Last loaded {lastUpdated.toLocaleTimeString()}
+              </span>
+            )}
           </p>
         </div>
 
