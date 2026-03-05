@@ -8,18 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import FeatureRequestForm from '@/components/FeatureRequestForm';
 
 type BillingInterval = 'monthly' | 'quarterly' | 'yearly';
-type PaymentProvider = 'paystack' | 'paypal';
-
-const billingLabels: Record<BillingInterval, string> = {
-  monthly: 'Monthly',
-  quarterly: 'Quarterly',
-  yearly: 'Yearly',
-};
-
-const providerLabels: Record<PaymentProvider, string> = {
-  paystack: 'Paystack',
-  paypal: 'PayPal',
-};
+type PaymentProvider = 'paypal';
 
 const tiers = [
   {
