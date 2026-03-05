@@ -114,24 +114,7 @@ const Pricing = () => {
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              {billingLabels[interval]}
-            </button>
-          ))}
-        </div>
-
-        {/* Provider toggle */}
-        <div className="mx-auto mb-10 flex max-w-[200px] items-center justify-center gap-1 rounded-xl border border-border/50 bg-secondary/50 p-1">
-          {(['paystack', 'paypal'] as PaymentProvider[]).map((p) => (
-            <button
-              key={p}
-              onClick={() => setProvider(p)}
-              className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
-                provider === p
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {providerLabels[p]}
+              {{ monthly: 'Monthly', quarterly: 'Quarterly', yearly: 'Yearly' }[interval]}
             </button>
           ))}
         </div>
