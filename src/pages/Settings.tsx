@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Save, Settings as SettingsIcon } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -64,8 +65,11 @@ const Settings = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="flex items-center justify-center pt-48">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="container mx-auto px-4 pb-12 pt-24">
+          <Skeleton className="h-8 w-48 mb-8" />
+          <div className="mx-auto max-w-lg space-y-6">
+            <Skeleton className="h-64 rounded-xl" />
+          </div>
         </div>
       </div>
     );

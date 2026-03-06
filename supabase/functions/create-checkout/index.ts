@@ -28,9 +28,8 @@ Deno.serve(async (req) => {
     }
 
     const userId = user.id
-    const userEmail = user.email
 
-    const { plan, provider, interval } = await req.json()
+    const { plan, interval } = await req.json()
 
     if (!['analyst', 'boardroom'].includes(plan)) {
       return new Response(JSON.stringify({ error: 'Invalid plan' }), { status: 400, headers: corsHeaders })
@@ -50,85 +49,59 @@ Deno.serve(async (req) => {
       yearly: 'Yearly',
     }
 
-    if (provider === 'paypal') {
-      const clientId = Deno.env.get('PAYPAL_CLIENT_ID')
-      const clientSecret = Deno.env.get('PAYPAL_CLIENT_SECRET')
-      const paypalEnv = Deno.env.get('PAYPAL_ENV') || 'sandbox'
+    const clientId = Deno.env.get('PAYPAL_CLIENT_ID')
+    const clientSecret = Deno.env.get('PAYPAL_CLIENT_SECRET')
 
-      if (!clientId || !clientSecret) {
-        return new Response(JSON.stringify({ error: 'PayPal not configured' }), { status: 500, headers: corsHeaders })
-      }
-
-      const baseUrl = paypalEnv === 'sandbox'
-        ? 'https://api-m.sandbox.paypal.com'
-        : 'https://api-m.paypal.com'
-
-      const tokenRes = await fetch(`${baseUrl}/v1/oauth2/token`, {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Basic ' + btoa(`${clientId}:${clientSecret}`),
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: 'grant_type=client_credentials',
-      })
-      const tokenData = await tokenRes.json()
-
-      const orderRes = await fetch(`${baseUrl}/v2/checkout/orders`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${tokenData.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          intent: 'CAPTURE',
-          purchase_units: [{
-            amount: { currency_code: 'USD', value: (amount / 100).toFixed(2) },
-            description: `Omni-Scout ${plan} subscription (${intervalLabels[validInterval]})`,
-            custom_id: JSON.stringify({ user_id: userId, plan, interval: validInterval }),
-          }],
-          application_context: {
-            return_url: `${req.headers.get('origin') || Deno.env.get('SUPABASE_URL')}/dashboard?payment=success`,
-            cancel_url: `${req.headers.get('origin') || Deno.env.get('SUPABASE_URL')}/pricing?payment=canceled`,
-          },
-        }),
-      })
-
-      const orderData = await orderRes.json()
-      const approveLink = orderData.links?.find((l: any) => l.rel === 'approve')
-
-      return new Response(JSON.stringify({ url: approveLink?.href, provider: 'paypal' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+    if (!clientId || !clientSecret) {
+      return new Response(JSON.stringify({ error: 'Payment provider not configured' }), { status: 500, headers: corsHeaders })
     }
 
-    // Default: Paystack
-    const paystackKey = Deno.env.get('PAYSTACK_SECRET_KEY')
-    if (!paystackKey) {
-      return new Response(JSON.stringify({ error: 'Paystack not configured' }), { status: 500, headers: corsHeaders })
-    }
+    const baseUrl = 'https://api-m.sandbox.paypal.com'
 
-    const paystackRes = await fetch('https://api.paystack.co/transaction/initialize', {
+    const tokenRes = await fetch(`${baseUrl}/v1/oauth2/token`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${paystackKey}`,
+        'Authorization': 'Basic ' + btoa(`${clientId}:${clientSecret}`),
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'grant_type=client_credentials',
+    })
+    const tokenData = await tokenRes.json()
+
+    if (!tokenData.access_token) {
+      return new Response(JSON.stringify({ error: 'Failed to authenticate with payment provider' }), { status: 500, headers: corsHeaders })
+    }
+
+    const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/$/, '') || ''
+
+    const orderRes = await fetch(`${baseUrl}/v2/checkout/orders`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${tokenData.access_token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        email: userEmail,
-        amount,
-        currency: 'USD',
-        callback_url: `${req.headers.get('origin') || Deno.env.get('SUPABASE_URL')}/dashboard?payment=success`,
-        metadata: { user_id: userId, plan, interval: validInterval, custom_fields: [] },
+        intent: 'CAPTURE',
+        purchase_units: [{
+          amount: { currency_code: 'USD', value: (amount / 100).toFixed(2) },
+          description: `Omni-Scout ${plan} subscription (${intervalLabels[validInterval]})`,
+          custom_id: JSON.stringify({ user_id: userId, plan, interval: validInterval }),
+        }],
+        application_context: {
+          return_url: `${origin}/dashboard?payment=success`,
+          cancel_url: `${origin}/pricing?payment=canceled`,
+        },
       }),
     })
 
-    const paystackData = await paystackRes.json()
+    const orderData = await orderRes.json()
+    const approveLink = orderData.links?.find((l: any) => l.rel === 'approve')
 
-    if (!paystackData.status) {
-      return new Response(JSON.stringify({ error: paystackData.message || 'Paystack error' }), { status: 500, headers: corsHeaders })
+    if (!approveLink?.href) {
+      return new Response(JSON.stringify({ error: 'Failed to create payment order' }), { status: 500, headers: corsHeaders })
     }
 
-    return new Response(JSON.stringify({ url: paystackData.data.authorization_url, provider: 'paystack' }), {
+    return new Response(JSON.stringify({ url: approveLink.href, provider: 'paypal' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
 
