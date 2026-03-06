@@ -1,10 +1,21 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart3, Shield, Eye, Users, Zap, TrendingUp, ArrowRight, Activity, Lock } from 'lucide-react';
 import heroImage from '@/assets/hero-africa.jpg';
 import Navbar from '@/components/Navbar';
-import { mockCompanies } from '@/lib/mockData';
+import { supabase } from '@/integrations/supabase/client';
 import ScoutScoreBar from '@/components/ScoutScoreBar';
 import SectorBadge from '@/components/SectorBadge';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { Sector } from '@/lib/types';
+
+type TopCompany = {
+  id: string;
+  name: string;
+  country: string;
+  sector: string;
+  scout_score: number;
+};
 
 const stats = [
   { label: 'Companies Tracked', value: '50' },
@@ -42,7 +53,20 @@ const tiers = [
 ];
 
 const Index = () => {
-  const topCompanies = mockCompanies.sort((a, b) => b.scoutScore - a.scoutScore).slice(0, 5);
+  const [topCompanies, setTopCompanies] = useState<TopCompany[]>([]);
+  const [loadingTop, setLoadingTop] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from('companies')
+      .select('id, name, country, sector, scout_score')
+      .order('scout_score', { ascending: false })
+      .limit(5)
+      .then(({ data }) => {
+        setTopCompanies((data as TopCompany[]) || []);
+        setLoadingTop(false);
+      });
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -111,19 +135,23 @@ const Index = () => {
             </Link>
           </div>
           <div className="grid gap-3 md:grid-cols-5">
-            {topCompanies.map((company, i) => (
-              <div key={company.id} className="glass-card rounded-xl p-4 animate-fade-in" style={{ animationDelay: `${i * 100}ms` }}>
-                <div className="mb-3 flex items-start justify-between">
-                  <span className="text-xs text-muted-foreground">#{i + 1}</span>
-                  <ScoutScoreBar score={company.scoutScore} />
-                </div>
-                <h3 className="font-display text-sm font-semibold leading-tight">{company.name}</h3>
-                <p className="mt-1 text-xs text-muted-foreground">{company.country}</p>
-                <div className="mt-3">
-                  <SectorBadge sector={company.sector} />
-                </div>
-              </div>
-            ))}
+            {loadingTop
+              ? [...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-32 rounded-xl" />
+                ))
+              : topCompanies.map((company, i) => (
+                  <div key={company.id} className="glass-card rounded-xl p-4 animate-fade-in" style={{ animationDelay: `${i * 100}ms` }}>
+                    <div className="mb-3 flex items-start justify-between">
+                      <span className="text-xs text-muted-foreground">#{i + 1}</span>
+                      <ScoutScoreBar score={company.scout_score} />
+                    </div>
+                    <h3 className="font-display text-sm font-semibold leading-tight">{company.name}</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">{company.country}</p>
+                    <div className="mt-3">
+                      <SectorBadge sector={company.sector as Sector} />
+                    </div>
+                  </div>
+                ))}
           </div>
         </div>
       </section>

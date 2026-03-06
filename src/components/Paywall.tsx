@@ -63,7 +63,7 @@ const Paywall = () => {
       </div>
 
       <p className="mt-6 text-xs text-muted-foreground">
-        Already subscribed? Try refreshing the page. Payments are processed via Paystack and PayPal.
+        Already subscribed? Try refreshing the page. Payments are processed via PayPal.
       </p>
     </div>
   );
