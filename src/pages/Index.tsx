@@ -176,6 +176,9 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Phantom Portfolio */}
+      <PhantomPortfolio />
+
       {/* Pricing Tiers */}
       <section id="tiers" className="border-t border-border/50 bg-muted/30 py-16">
         <div className="container mx-auto px-4">
