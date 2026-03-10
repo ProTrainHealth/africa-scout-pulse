@@ -21,12 +21,6 @@ type TopCompany = {
   scout_score: number;
 };
 
-const stats = [
-  { label: 'Companies Tracked', value: '50' },
-  { label: 'Sectors Covered', value: '6' },
-  { label: 'Countries', value: '15' },
-  { label: 'Avg Scout Score', value: '74' },
-];
 
 const tiers = [
   {
