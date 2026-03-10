@@ -108,15 +108,7 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Stats bar */}
-          <div className="mx-auto mt-16 grid max-w-2xl grid-cols-2 gap-4 md:grid-cols-4">
-            {stats.map((stat) => (
-              <div key={stat.label} className="glass-card rounded-xl p-4 text-center">
-                <div className="font-display text-2xl font-bold text-primary">{stat.value}</div>
-                <div className="mt-1 text-xs text-muted-foreground">{stat.label}</div>
-              </div>
-            ))}
-          </div>
+          <LiveStatsBar />
         </div>
       </section>
 
