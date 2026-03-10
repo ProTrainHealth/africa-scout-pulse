@@ -22,6 +22,7 @@ export type Database = {
           event_date: string
           id: string
           notes: string
+          signal_type: string
           source_url: string
           title: string
           type: string
@@ -33,6 +34,7 @@ export type Database = {
           event_date?: string
           id?: string
           notes?: string
+          signal_type?: string
           source_url?: string
           title: string
           type?: string
@@ -44,6 +46,7 @@ export type Database = {
           event_date?: string
           id?: string
           notes?: string
+          signal_type?: string
           source_url?: string
           title?: string
           type?: string
@@ -70,6 +73,7 @@ export type Database = {
           insider_ownership: number
           institutional_flow: string
           market_cap: string
+          market_cap_tier: string
           name: string
           next_catalyst: string
           scout_score: number
@@ -87,6 +91,7 @@ export type Database = {
           insider_ownership?: number
           institutional_flow?: string
           market_cap?: string
+          market_cap_tier?: string
           name: string
           next_catalyst?: string
           scout_score?: number
@@ -104,6 +109,7 @@ export type Database = {
           insider_ownership?: number
           institutional_flow?: string
           market_cap?: string
+          market_cap_tier?: string
           name?: string
           next_catalyst?: string
           scout_score?: number
@@ -143,6 +149,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      country_context: {
+        Row: {
+          country: string
+          flag_emoji: string
+          id: string
+          regime_status: string
+          risk_tag: string
+          updated_at: string
+        }
+        Insert: {
+          country: string
+          flag_emoji?: string
+          id?: string
+          regime_status?: string
+          risk_tag?: string
+          updated_at?: string
+        }
+        Update: {
+          country?: string
+          flag_emoji?: string
+          id?: string
+          regime_status?: string
+          risk_tag?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       feature_requests: {
         Row: {
@@ -283,6 +316,76 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      scout_score_history: {
+        Row: {
+          company_id: string
+          id: string
+          recorded_at: string
+          score: number
+        }
+        Insert: {
+          company_id: string
+          id?: string
+          recorded_at?: string
+          score?: number
+        }
+        Update: {
+          company_id?: string
+          id?: string
+          recorded_at?: string
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scout_score_history_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      signals: {
+        Row: {
+          analyst_tag: string
+          company_id: string
+          confidence: string
+          created_at: string
+          id: string
+          is_public: boolean
+          published_at: string
+          summary: string
+        }
+        Insert: {
+          analyst_tag?: string
+          company_id: string
+          confidence?: string
+          created_at?: string
+          id?: string
+          is_public?: boolean
+          published_at?: string
+          summary: string
+        }
+        Update: {
+          analyst_tag?: string
+          company_id?: string
+          confidence?: string
+          created_at?: string
+          id?: string
+          is_public?: boolean
+          published_at?: string
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscriptions: {
         Row: {
