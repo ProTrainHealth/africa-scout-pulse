@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart3, Shield, Eye, Users, Zap, TrendingUp, ArrowRight, Activity, Lock } from 'lucide-react';
+import { BarChart3, Shield, Eye, Zap, TrendingUp, ArrowRight, Activity, Lock } from 'lucide-react';
 import heroImage from '@/assets/hero-africa.jpg';
 import Navbar from '@/components/Navbar';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +8,10 @@ import ScoutScoreBar from '@/components/ScoutScoreBar';
 import SectorBadge from '@/components/SectorBadge';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Sector } from '@/lib/types';
+import LiveStatsBar from '@/components/landing/LiveStatsBar';
+import CatalystFeed from '@/components/landing/CatalystFeed';
+import PhantomPortfolio from '@/components/landing/PhantomPortfolio';
+import BoardroomSeats from '@/components/landing/BoardroomSeats';
 
 type TopCompany = {
   id: string;
