@@ -150,6 +150,7 @@ const Index = () => {
       <CatalystFeed />
 
       {/* Value Props */}
+      <section className="border-t border-border/50 py-16">
         <div className="container mx-auto px-4">
           <div className="mx-auto mb-12 max-w-lg text-center">
             <h2 className="font-display text-3xl font-bold">Why Omni-Scout?</h2>
