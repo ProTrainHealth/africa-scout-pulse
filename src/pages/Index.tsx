@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart3, Shield, Eye, Users, Zap, TrendingUp, ArrowRight, Activity, Lock } from 'lucide-react';
+import { BarChart3, Shield, Eye, Zap, TrendingUp, ArrowRight, Activity, Lock } from 'lucide-react';
 import heroImage from '@/assets/hero-africa.jpg';
 import Navbar from '@/components/Navbar';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +8,10 @@ import ScoutScoreBar from '@/components/ScoutScoreBar';
 import SectorBadge from '@/components/SectorBadge';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Sector } from '@/lib/types';
+import LiveStatsBar from '@/components/landing/LiveStatsBar';
+import CatalystFeed from '@/components/landing/CatalystFeed';
+import PhantomPortfolio from '@/components/landing/PhantomPortfolio';
+import BoardroomSeats from '@/components/landing/BoardroomSeats';
 
 type TopCompany = {
   id: string;
@@ -17,12 +21,6 @@ type TopCompany = {
   scout_score: number;
 };
 
-const stats = [
-  { label: 'Companies Tracked', value: '50' },
-  { label: 'Sectors Covered', value: '6' },
-  { label: 'Countries', value: '15' },
-  { label: 'Avg Scout Score', value: '74' },
-];
 
 const tiers = [
   {
@@ -110,15 +108,7 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Stats bar */}
-          <div className="mx-auto mt-16 grid max-w-2xl grid-cols-2 gap-4 md:grid-cols-4">
-            {stats.map((stat) => (
-              <div key={stat.label} className="glass-card rounded-xl p-4 text-center">
-                <div className="font-display text-2xl font-bold text-primary">{stat.value}</div>
-                <div className="mt-1 text-xs text-muted-foreground">{stat.label}</div>
-              </div>
-            ))}
-          </div>
+          <LiveStatsBar />
         </div>
       </section>
 
@@ -156,6 +146,9 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Catalyst Feed */}
+      <CatalystFeed />
+
       {/* Value Props */}
       <section className="border-t border-border/50 py-16">
         <div className="container mx-auto px-4">
@@ -183,6 +176,9 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Phantom Portfolio */}
+      <PhantomPortfolio />
+
       {/* Pricing Tiers */}
       <section id="tiers" className="border-t border-border/50 bg-muted/30 py-16">
         <div className="container mx-auto px-4">
@@ -205,11 +201,7 @@ const Index = () => {
                     Most Popular
                   </div>
                 )}
-                {tier.limited && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-destructive px-3 py-0.5 text-xs font-semibold text-destructive-foreground">
-                    12 seats left
-                  </div>
-                )}
+                {tier.limited && <BoardroomSeats />}
                 <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                   <tier.icon className="h-5 w-5 text-primary" />
                 </div>

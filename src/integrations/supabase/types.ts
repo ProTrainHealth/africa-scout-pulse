@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      catalysts: {
+        Row: {
+          company_id: string
+          confidence: string
+          created_at: string
+          event_date: string
+          id: string
+          notes: string
+          source_url: string
+          title: string
+          type: string
+        }
+        Insert: {
+          company_id: string
+          confidence?: string
+          created_at?: string
+          event_date?: string
+          id?: string
+          notes?: string
+          source_url?: string
+          title: string
+          type?: string
+        }
+        Update: {
+          company_id?: string
+          confidence?: string
+          created_at?: string
+          event_date?: string
+          id?: string
+          notes?: string
+          source_url?: string
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalysts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           cash_runway: number
@@ -132,6 +176,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      phantom_portfolio: {
+        Row: {
+          company_id: string
+          created_at: string
+          current_price: number
+          entry_date: string
+          entry_price: number
+          id: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          current_price?: number
+          entry_date?: string
+          entry_price?: number
+          id?: string
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          current_price?: number
+          entry_date?: string
+          entry_price?: number
+          id?: string
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phantom_portfolio_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
