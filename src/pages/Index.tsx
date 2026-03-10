@@ -201,11 +201,7 @@ const Index = () => {
                     Most Popular
                   </div>
                 )}
-                {tier.limited && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-destructive px-3 py-0.5 text-xs font-semibold text-destructive-foreground">
-                    12 seats left
-                  </div>
-                )}
+                {tier.limited && <BoardroomSeats />}
                 <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                   <tier.icon className="h-5 w-5 text-primary" />
                 </div>
