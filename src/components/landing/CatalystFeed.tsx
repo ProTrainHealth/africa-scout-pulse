@@ -5,84 +5,118 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Skeleton } from '@/components/ui/skeleton';
-import SectorBadge from '@/components/SectorBadge';
-import type { Sector } from '@/lib/types';
+import { formatDistanceToNowStrict } from 'date-fns';
 
 type CatalystEntry = {
   id: string;
   title: string;
   type: string;
+  signal_type: string;
   event_date: string;
+  created_at: string;
   confidence: string;
-  company: { id: string; name: string; country: string; sector: string };
+  company: { id: string; name: string; country: string; country_code: string };
 };
 
-const TYPE_COLORS: Record<string, string> = {
-  earnings: 'bg-blue-500/15 text-blue-400',
-  contract: 'bg-emerald-500/15 text-emerald-400',
-  regulatory: 'bg-amber-500/15 text-amber-400',
-  infrastructure: 'bg-primary/15 text-primary',
-  policy: 'bg-purple-500/15 text-purple-400',
-  financing: 'bg-cyan-500/15 text-cyan-400',
+const SIGNAL_COLORS: Record<string, { bg: string; text: string; label: string }> = {
+  positive: { bg: 'bg-accent/15', text: 'text-accent', label: 'Positive' },
+  risk: { bg: 'bg-destructive/15', text: 'text-destructive', label: 'Risk' },
+  watch: { bg: 'bg-primary/15', text: 'text-primary', label: 'Watch' },
+  neutral: { bg: 'bg-muted', text: 'text-muted-foreground', label: 'Neutral' },
+};
+
+const COUNTRY_FLAGS: Record<string, string> = {
+  Nigeria: '🇳🇬', 'South Africa': '🇿🇦', Kenya: '🇰🇪', Egypt: '🇪🇬', Morocco: '🇲🇦',
+  Ghana: '🇬🇭', Ethiopia: '🇪🇹', Tanzania: '🇹🇿', Rwanda: '🇷🇼', "Côte d'Ivoire": '🇨🇮',
+  Senegal: '🇸🇳', DRC: '🇨🇩', Mozambique: '🇲🇿', Angola: '🇦🇴', Zambia: '🇿🇲',
 };
 
 const CatalystFeed = () => {
-  const { user, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const { plan } = useSubscription();
   const [catalysts, setCatalysts] = useState<CatalystEntry[] | null>(null);
 
   const canSeeDetails = isAdmin || plan === 'analyst' || plan === 'boardroom';
 
+  const fetchCatalysts = async () => {
+    const { data } = await supabase
+      .from('catalysts')
+      .select('id, title, type, signal_type, event_date, confidence, company_id, created_at')
+      .order('created_at', { ascending: false })
+      .limit(8);
+
+    if (!data || data.length === 0) { setCatalysts([]); return; }
+
+    const companyIds = [...new Set(data.map((c) => c.company_id))];
+    const { data: companies } = await supabase
+      .from('companies')
+      .select('id, name, country, country_code')
+      .in('id', companyIds);
+
+    const companyMap = new Map((companies ?? []).map((c) => [c.id, c]));
+
+    setCatalysts(
+      data.map((c) => ({
+        ...c,
+        signal_type: (c as any).signal_type ?? 'neutral',
+        company: companyMap.get(c.company_id) ?? { id: c.company_id, name: 'Unknown', country: '', country_code: '' },
+      }))
+    );
+  };
+
   useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase
-        .from('catalysts')
-        .select('id, title, type, event_date, confidence, company_id')
-        .order('event_date', { ascending: false })
-        .limit(5);
+    fetchCatalysts();
 
-      if (!data || data.length === 0) {
-        setCatalysts([]);
-        return;
-      }
+    const channel = supabase
+      .channel('catalysts-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'catalysts' }, () => {
+        fetchCatalysts();
+      })
+      .subscribe();
 
-      const companyIds = [...new Set(data.map((c) => c.company_id))];
-      const { data: companies } = await supabase
-        .from('companies')
-        .select('id, name, country, sector')
-        .in('id', companyIds);
+    const interval = setInterval(fetchCatalysts, 60000);
 
-      const companyMap = new Map((companies ?? []).map((c) => [c.id, c]));
-
-      setCatalysts(
-        data.map((c) => ({
-          id: c.id,
-          title: c.title,
-          type: c.type,
-          event_date: c.event_date,
-          confidence: c.confidence,
-          company: companyMap.get(c.company_id) ?? { id: c.company_id, name: 'Unknown', country: '', sector: '' },
-        }))
-      );
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
     };
-    fetch();
   }, []);
 
   if (catalysts !== null && catalysts.length === 0) return null;
 
+  const tickerItems = catalysts?.slice(0, 3) ?? [];
+
   return (
-    <section className="border-t border-border/50 py-16">
-      <div className="container mx-auto px-4">
-        <div className="mb-8 flex items-center justify-between">
+    <section className="border-t border-border/50 py-0">
+      {/* Headline Wire Ticker */}
+      {tickerItems.length > 0 && (
+        <div className="overflow-hidden border-b border-border/30 bg-muted/50 py-2">
+          <div className="flex animate-ticker hover:[animation-play-state:paused]" style={{ width: 'max-content' }}>
+            {[...tickerItems, ...tickerItems, ...tickerItems].map((c, i) => {
+              const signal = SIGNAL_COLORS[c.signal_type] ?? SIGNAL_COLORS.neutral;
+              return (
+                <span key={`${c.id}-${i}`} className="mx-6 inline-flex items-center gap-2 text-xs whitespace-nowrap">
+                  <span className={`inline-block h-1.5 w-1.5 rounded-full ${signal.bg.replace('/15', '')}`} />
+                  <span className="font-semibold text-foreground">{c.company.name}</span>
+                  <span className="text-muted-foreground">{c.title.slice(0, 60)}{c.title.length > 60 ? '…' : ''}</span>
+                  <span className="text-muted-foreground/60">
+                    {formatDistanceToNowStrict(new Date(c.created_at), { addSuffix: true })}
+                  </span>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="container mx-auto px-4 py-12">
+        <div className="mb-6 flex items-center justify-between">
           <div>
             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-3 py-1 text-xs text-primary">
               <Zap className="h-3 w-3" />
               Live Intel
             </div>
             <h2 className="font-display text-2xl font-bold">Catalyst Feed</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Upcoming events shaping Africa's infrastructure landscape
-            </p>
           </div>
           <Link
             to="/dashboard"
@@ -92,63 +126,52 @@ const CatalystFeed = () => {
           </Link>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-1.5">
           {catalysts === null
-            ? [...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)
-            : catalysts.map((c, i) => (
-                <div
-                  key={c.id}
-                  className="glass-card relative flex flex-col gap-3 rounded-xl p-4 animate-fade-in sm:flex-row sm:items-center sm:justify-between"
-                  style={{ animationDelay: `${i * 80}ms` }}
-                >
-                  {/* Left: company + type */}
-                  <div className="flex items-start gap-3 sm:items-center">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-bold text-muted-foreground">
-                      {new Date(c.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-display text-sm font-semibold truncate">
-                          {c.company.name}
-                        </span>
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${TYPE_COLORS[c.type] ?? 'bg-muted text-muted-foreground'}`}>
-                          {c.type}
-                        </span>
+            ? [...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)
+            : catalysts.map((c, i) => {
+                const signal = SIGNAL_COLORS[c.signal_type] ?? SIGNAL_COLORS.neutral;
+                const flag = COUNTRY_FLAGS[c.company.country] ?? '🌍';
+                return (
+                  <div
+                    key={c.id}
+                    className="glass-card relative flex items-center gap-3 rounded-lg px-4 py-3 animate-fade-in"
+                    style={{ animationDelay: `${i * 50}ms` }}
+                  >
+                    {/* Signal badge */}
+                    <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${signal.bg} ${signal.text}`}>
+                      {signal.label}
+                    </span>
+
+                    {/* Company */}
+                    <span className="font-display text-sm font-semibold shrink-0">{c.company.name}</span>
+
+                    {/* Title */}
+                    <span className={`flex-1 truncate text-xs ${canSeeDetails ? 'text-muted-foreground' : 'text-muted-foreground blur-sm select-none'}`}>
+                      {c.title}
+                    </span>
+
+                    {/* Meta */}
+                    <span className="shrink-0 text-sm" title={c.company.country}>{flag}</span>
+                    <span className="shrink-0 text-[10px] text-muted-foreground tabular-nums w-14 text-right">
+                      {formatDistanceToNowStrict(new Date(c.created_at), { addSuffix: false })}
+                    </span>
+
+                    {/* Lock overlay */}
+                    {!canSeeDetails && (
+                      <div className="absolute inset-0 flex items-center justify-end rounded-lg bg-background/50 backdrop-blur-[1px] pr-4">
+                        <Link
+                          to="/pricing"
+                          className="inline-flex items-center gap-1.5 rounded bg-primary px-2.5 py-1 text-[10px] font-semibold text-primary-foreground hover:bg-primary/90"
+                        >
+                          <Lock className="h-2.5 w-2.5" />
+                          Unlock with Analyst
+                        </Link>
                       </div>
-                      {canSeeDetails ? (
-                        <p className="mt-0.5 text-xs text-muted-foreground truncate max-w-md">
-                          {c.title}
-                        </p>
-                      ) : (
-                        <p className="mt-0.5 text-xs text-muted-foreground blur-sm select-none">
-                          {c.title}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Right: country + confidence */}
-                  <div className="flex items-center gap-3">
-                    {c.company.sector && (
-                      <SectorBadge sector={c.company.sector as Sector} />
                     )}
-                    <span className="text-xs text-muted-foreground">{c.company.country}</span>
                   </div>
-
-                  {/* Lock overlay for non-entitled */}
-                  {!canSeeDetails && (
-                    <div className="absolute inset-0 flex items-center justify-end rounded-xl bg-background/60 backdrop-blur-[1px] pr-4">
-                      <Link
-                        to="/pricing"
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-                      >
-                        <Lock className="h-3 w-3" />
-                        Unlock with Analyst
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
         </div>
       </div>
     </section>
