@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/s
 
 const Navbar = () => {
   const location = useLocation();
-  const { user, loading, signOut } = useAuth();
+  const { user, isAdmin, loading, signOut } = useAuth();
   const { isActive } = useSubscription();
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
