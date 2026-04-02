@@ -105,7 +105,7 @@ const LiveStatsBar = () => {
           {hasError ? 'Cached Data' : 'Live'}
         </span>
       </div>
-      <div className="grid grid-cols-3 gap-3 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
         {stats
           ? stats.map((stat) => (
               <AnimatedStat key={stat.label} stat={stat} hasError={hasError} />
