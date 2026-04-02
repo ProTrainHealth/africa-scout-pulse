@@ -62,7 +62,7 @@ const RegimeRadar = () => {
             <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-destructive" /> Elevated Risk</span>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 md:grid-cols-5">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
             {countries === null
               ? [...Array(15)].map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)
               : countries.map((c) => {

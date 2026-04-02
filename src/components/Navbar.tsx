@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/s
 
 const Navbar = () => {
   const location = useLocation();
-  const { user, loading, signOut } = useAuth();
+  const { user, isAdmin, loading, signOut } = useAuth();
   const { isActive } = useSubscription();
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
@@ -57,6 +57,18 @@ const Navbar = () => {
 
       {user ? (
         <>
+          {isAdmin && (
+            <>
+              <Link to="/admin/regime" className={navLinkClass('/admin/regime')} onClick={onNavigate}>
+                <Globe className="h-4 w-4" />
+                Regime
+              </Link>
+              <Link to="/admin/signals" className={navLinkClass('/admin/signals')} onClick={onNavigate}>
+                <Activity className="h-4 w-4" />
+                Signals
+              </Link>
+            </>
+          )}
           <Link to="/orders" className={navLinkClass('/orders')} onClick={onNavigate}>
             <Receipt className="h-4 w-4" />
             Orders

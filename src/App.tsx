@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
+import RegimeAdmin from "./pages/admin/RegimeAdmin";
+import SignalsAdmin from "./pages/admin/SignalsAdmin";
 import Resources from "./pages/Resources";
 import ResourceDetail from "./pages/ResourceDetail";
 import Pricing from "./pages/Pricing";
@@ -41,6 +43,8 @@ const App = () => {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/regime" element={<RegimeAdmin />} />
+          <Route path="/admin/signals" element={<SignalsAdmin />} />
           <Route path="/resources" element={<Resources />} />
           <Route path="/resources/:id" element={<ResourceDetail />} />
           <Route path="/pricing" element={<Pricing />} />
