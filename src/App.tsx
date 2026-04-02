@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
+import RegimeAdmin from "./pages/admin/RegimeAdmin";
+import SignalsAdmin from "./pages/admin/SignalsAdmin";
 import Resources from "./pages/Resources";
 import ResourceDetail from "./pages/ResourceDetail";
 import Pricing from "./pages/Pricing";
