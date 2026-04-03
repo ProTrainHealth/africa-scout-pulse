@@ -28,7 +28,6 @@ const Checkout = () => {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
-  const provider = 'paypal';
   const plan = params.get('plan') || 'analyst';
   const period = (params.get('period') || 'monthly') as BillingInterval;
 
@@ -37,36 +36,35 @@ const Checkout = () => {
 
   useEffect(() => {
     if (!authLoading && !user) {
+      sessionStorage.setItem('return_to', `/checkout?plan=${plan}&period=${period}`);
       navigate('/auth');
       return;
     }
-    if (user) {
-      setStatus('ready');
-    }
+    if (user) setStatus('ready');
   }, [user, authLoading]);
-  const initPayPal = async () => {
-    try {
-      // Create order via existing create-checkout function
-      setStatus('ready');
-    } catch (err: any) {
-      setStatus('error');
-      setErrorMsg(err.message || 'Unable to initialize PayPal');
-    }
-  };
 
   const handlePayPalCheckout = async () => {
     setStatus('processing');
     try {
+      console.log('[Checkout] Invoking create-checkout with:', { plan, interval: period });
       const res = await supabase.functions.invoke('create-checkout', {
         body: { plan, provider: 'paypal', interval: period },
       });
-      if (res.error) throw new Error(res.error.message);
-      if (res.data?.url) {
-        window.location.href = res.data.url;
-      } else {
-        throw new Error('No PayPal approval URL returned');
+
+      console.log('[Checkout] Edge function response:', res);
+
+      if (res.error) {
+        throw new Error(res.error.message || 'Edge function returned an error');
       }
+
+      if (!res.data?.url) {
+        throw new Error(res.data?.error || 'No PayPal approval URL returned');
+      }
+
+      toast({ title: 'Redirecting to PayPal...', description: 'You will complete payment on PayPal.' });
+      window.location.href = res.data.url;
     } catch (err: any) {
+      console.error('[Checkout] Error:', err);
       setStatus('error');
       setErrorMsg(err.message || 'PayPal checkout failed');
       toast({ title: 'Checkout error', description: err.message, variant: 'destructive' });
@@ -113,32 +111,36 @@ const Checkout = () => {
               </div>
               <div className="flex justify-between text-sm text-muted-foreground">
                 <span>Provider</span>
-                <span className="capitalize">{provider}</span>
+                <span>PayPal</span>
               </div>
             </div>
           </div>
 
           {/* Payment action */}
-          <div className="mt-6">
-            <div className="space-y-4">
-              {status === 'error' && (
-                <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-                  <AlertCircle className="mb-1 inline h-4 w-4" /> {errorMsg}
-                </div>
+          <div className="mt-6 space-y-4">
+            {status === 'error' && (
+              <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+                <AlertCircle className="mb-1 inline h-4 w-4" /> {errorMsg}
+                <Button variant="link" className="ml-2 text-destructive underline p-0 h-auto" onClick={() => setStatus('ready')}>
+                  Try again
+                </Button>
+              </div>
+            )}
+            <Button
+              onClick={handlePayPalCheckout}
+              disabled={status === 'processing' || status === 'loading'}
+              className="w-full bg-[hsl(210,80%,50%)] hover:bg-[hsl(210,80%,45%)] text-white"
+              size="lg"
+            >
+              {status === 'processing' ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
+              ) : (
+                'Pay with PayPal'
               )}
-              <Button
-                onClick={handlePayPalCheckout}
-                disabled={status === 'processing'}
-                className="w-full bg-[hsl(210,80%,50%)] hover:bg-[hsl(210,80%,45%)] text-white"
-                size="lg"
-              >
-                {status === 'processing' ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
-                ) : (
-                  'Pay with PayPal'
-                )}
-              </Button>
-            </div>
+            </Button>
+            <p className="text-center text-[10px] text-muted-foreground">
+              You will be redirected to PayPal to complete your subscription securely.
+            </p>
           </div>
         </div>
       </div>

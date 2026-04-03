@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Calendar, TrendingUp, Users, DollarSign, Loader2 } from 'lucide-react';
+import { Search, Filter, Calendar, TrendingUp, Users, DollarSign } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Paywall from '@/components/Paywall';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,6 +12,9 @@ import ScoutScoreBar from '@/components/ScoutScoreBar';
 import FlowIndicator from '@/components/FlowIndicator';
 import WatchlistButton from '@/components/WatchlistButton';
 import { Skeleton } from '@/components/ui/skeleton';
+import CatalystFeed from '@/components/landing/CatalystFeed';
+import PhantomPortfolio from '@/components/landing/PhantomPortfolio';
+import RegimeRadar from '@/components/landing/RegimeRadar';
 
 const DashboardSkeleton = () => (
   <div className="container mx-auto px-4 pb-12 pt-24">
@@ -267,6 +270,13 @@ const Dashboard = () => {
           {filtered.length === 0 && (
             <div className="py-12 text-center text-muted-foreground">No companies match your filters.</div>
           )}
+        </div>
+
+        {/* Terminal features — now behind auth wall */}
+        <div className="mt-12 space-y-0">
+          <CatalystFeed />
+          <RegimeRadar />
+          <PhantomPortfolio />
         </div>
       </div>
     </div>
