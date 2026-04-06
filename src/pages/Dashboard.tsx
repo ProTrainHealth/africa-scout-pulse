@@ -2,8 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import {
   Search, Filter, Calendar, TrendingUp, Users, DollarSign,
-  LayoutDashboard, Star, Globe, BookOpen, Receipt, Settings, LogOut, Menu, X,
-  ArrowUp, ArrowDown, Minus,
+  LayoutDashboard, Star, Globe, BookOpen, Receipt, Settings, LogOut, Menu,
+  Shield,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
