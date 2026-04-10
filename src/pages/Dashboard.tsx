@@ -295,7 +295,7 @@ const Dashboard = () => {
           <div className="mt-10">
             <h2 className="font-display text-xl font-bold mb-4">Catalyst Calendar</h2>
             <div className="space-y-2">
-              {CATALYSTS.map((cat) => (
+              {catalysts.map((cat) => (
                 <div key={cat.date + cat.company} className="glass-card rounded-lg px-4 py-3 flex items-center gap-4">
                   <span className="shrink-0 rounded-md bg-primary/10 px-2.5 py-1 font-mono text-xs font-semibold text-primary">{cat.date}</span>
                   <div className="flex-1 min-w-0">
