@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 
-type StatData = { label: string; value: number; suffix?: string };
+type StatData = { label: string; value: number; suffix?: string; prefix?: string };
 
 const useCountUp = (target: number, duration = 1200) => {
   const [current, setCurrent] = useState(0);
@@ -29,13 +29,32 @@ const AnimatedStat = ({ stat, hasError }: { stat: StatData; hasError: boolean })
   return (
     <div className="glass-card rounded-xl p-4 text-center min-w-0">
       <div className="font-display text-2xl font-bold text-primary tabular-nums">
-        {count}{stat.suffix ?? ''}
+        {stat.prefix ?? ''}{count.toLocaleString()}{stat.suffix ?? ''}
       </div>
       <div className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">
         {stat.label}
       </div>
     </div>
   );
+};
+
+const parseMarketCap = (cap: string): number => {
+  if (!cap) return 0;
+  const cleaned = cap.replace(/[^0-9.BMTK]/gi, '').trim();
+  const num = parseFloat(cleaned);
+  if (isNaN(num)) return 0;
+  const upper = cap.toUpperCase();
+  if (upper.includes('T')) return num * 1_000_000_000_000;
+  if (upper.includes('B')) return num * 1_000_000_000;
+  if (upper.includes('M')) return num * 1_000_000;
+  if (upper.includes('K')) return num * 1_000;
+  return num;
+};
+
+const formatMarketCap = (total: number): { value: number; suffix: string; prefix: string } => {
+  if (total >= 1_000_000_000_000) return { value: Math.round(total / 100_000_000_000) / 10, suffix: 'T', prefix: '$' };
+  if (total >= 1_000_000_000) return { value: Math.round(total / 100_000_000) / 10, suffix: 'B', prefix: '$' };
+  return { value: Math.round(total / 1_000_000), suffix: 'M', prefix: '$' };
 };
 
 const LiveStatsBar = () => {
@@ -45,51 +64,36 @@ const LiveStatsBar = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [companiesRes, catalystsRes] = await Promise.all([
-          supabase.from('companies').select('sector, country, scout_score'),
-          supabase.from('catalysts').select('id').gte(
-            'event_date',
-            new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
-          ),
+        const [companiesRes, catalystsRes, regimeRes] = await Promise.all([
+          supabase.from('companies').select('market_cap'),
+          supabase.from('catalysts').select('id'),
+          supabase.from('country_context').select('risk_tag'),
         ]);
 
         if (companiesRes.error) throw companiesRes.error;
 
         const companies = companiesRes.data ?? [];
-        const catalystsThisWeek = catalystsRes.data?.length ?? 0;
+        const catalystCount = catalystsRes.data?.length ?? 0;
+        const regimeAlerts = (regimeRes.data ?? []).filter(
+          (r) => r.risk_tag && r.risk_tag.trim() !== ''
+        ).length;
 
-        if (companies.length === 0) {
-          setStats([
-            { label: 'Companies Tracked', value: 0 },
-            { label: 'Sectors Covered', value: 0 },
-            { label: 'Countries', value: 0 },
-            { label: 'Avg Scout Score', value: 0 },
-            { label: 'Catalysts This Week', value: 0 },
-          ]);
-          return;
-        }
-
-        const sectors = new Set(companies.map((c) => c.sector));
-        const countries = new Set(companies.map((c) => c.country));
-        const avgScore = Math.round(
-          companies.reduce((sum, c) => sum + (c.scout_score ?? 0), 0) / companies.length
-        );
+        const totalCap = companies.reduce((sum, c) => sum + parseMarketCap(c.market_cap), 0);
+        const capFormatted = formatMarketCap(totalCap);
 
         setStats([
           { label: 'Companies Tracked', value: companies.length },
-          { label: 'Sectors Covered', value: sectors.size },
-          { label: 'Countries', value: countries.size },
-          { label: 'Avg Scout Score', value: avgScore },
-          { label: 'Catalysts This Week', value: catalystsThisWeek },
+          { label: 'Active Catalysts', value: catalystCount },
+          { label: 'Regime Alerts', value: regimeAlerts },
+          { label: 'Market Cap Tracked', value: Math.round(capFormatted.value), suffix: capFormatted.suffix, prefix: capFormatted.prefix },
         ]);
       } catch {
         setHasError(true);
         setStats([
           { label: 'Companies Tracked', value: 50 },
-          { label: 'Sectors Covered', value: 6 },
-          { label: 'Countries', value: 15 },
-          { label: 'Avg Scout Score', value: 72 },
-          { label: 'Catalysts This Week', value: 0 },
+          { label: 'Active Catalysts', value: 12 },
+          { label: 'Regime Alerts', value: 3 },
+          { label: 'Market Cap Tracked', value: 2, suffix: 'T', prefix: '$' },
         ]);
       }
     };
@@ -105,12 +109,12 @@ const LiveStatsBar = () => {
           {hasError ? 'Cached Data' : 'Live'}
         </span>
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {stats
           ? stats.map((stat) => (
               <AnimatedStat key={stat.label} stat={stat} hasError={hasError} />
             ))
-          : [...Array(5)].map((_, i) => (
+          : [...Array(4)].map((_, i) => (
               <div key={i} className="glass-card rounded-xl p-4 text-center">
                 <Skeleton className="mx-auto h-8 w-12" />
                 <Skeleton className="mx-auto mt-2 h-3 w-16" />
