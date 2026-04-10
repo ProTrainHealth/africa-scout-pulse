@@ -29,13 +29,7 @@ const SIDEBAR_ITEMS = [
   { label: 'Settings', to: '/settings', icon: Settings },
 ];
 
-/* ── Mock catalyst data ── */
-const CATALYSTS = [
-  { date: 'Apr 10', company: 'MTN Group', event: 'Q1 Earnings', type: 'earnings' },
-  { date: 'Apr 15', company: 'Safaricom', event: 'Annual General Meeting', type: 'regulatory' },
-  { date: 'Apr 22', company: 'ESKOM Renewables', event: 'Capacity Update', type: 'insider' },
-  { date: 'May 3', company: 'Dangote Cement', event: 'Full Year Results', type: 'earnings' },
-];
+type CatalystRow = { date: string; company: string; event: string; type: string };
 
 /* ── Mock phantom portfolio ── */
 const PHANTOM = [
@@ -63,6 +57,7 @@ const Dashboard = () => {
   const location = useLocation();
 
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [catalysts, setCatalysts] = useState<CatalystRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedSector, setSelectedSector] = useState<Sector | 'All'>('All');
@@ -80,28 +75,40 @@ const Dashboard = () => {
 
   useEffect(() => {
     if ((!isActive && !isAdmin) || !user) return;
-    const fetchCompanies = async () => {
-      const { data, error } = await supabase.from('companies').select('*');
-      if (error) { setLoading(false); return; }
-      const mapped: Company[] = (data || []).map((row) => ({
-        id: row.id,
-        name: row.name,
-        sector: row.sector as Sector,
-        country: row.country,
-        countryCode: row.country_code,
-        cashRunway: row.cash_runway,
-        insiderOwnership: Number(row.insider_ownership),
-        scoutScore: row.scout_score,
-        nextCatalyst: row.next_catalyst,
-        catalystDate: row.catalyst_date,
-        institutionalFlow: row.institutional_flow as Company['institutionalFlow'],
-        marketCap: row.market_cap,
-        description: row.description,
-      }));
-      setCompanies(mapped);
+    const fetchData = async () => {
+      const [compRes, catRes] = await Promise.all([
+        supabase.from('companies').select('*'),
+        supabase.from('catalysts').select('id, title, type, event_date, signal_type, company_id, companies(name)').order('event_date', { ascending: true }).limit(20),
+      ]);
+      if (!compRes.error && compRes.data) {
+        const mapped: Company[] = compRes.data.map((row) => ({
+          id: row.id,
+          name: row.name,
+          sector: row.sector as Sector,
+          country: row.country,
+          countryCode: row.country_code,
+          cashRunway: row.cash_runway,
+          insiderOwnership: Number(row.insider_ownership),
+          scoutScore: row.scout_score,
+          nextCatalyst: row.next_catalyst,
+          catalystDate: row.catalyst_date,
+          institutionalFlow: row.institutional_flow as Company['institutionalFlow'],
+          marketCap: row.market_cap,
+          description: row.description,
+        }));
+        setCompanies(mapped);
+      }
+      if (!catRes.error && catRes.data) {
+        setCatalysts(catRes.data.map((r: any) => ({
+          date: new Date(r.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          company: r.companies?.name ?? 'Unknown',
+          event: r.title,
+          type: r.type,
+        })));
+      }
       setLoading(false);
     };
-    fetchCompanies();
+    fetchData();
   }, [isActive, isAdmin, user]);
 
   const filtered = useMemo(() => {
