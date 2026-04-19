@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   ComposableMap,
   Geographies,
@@ -7,6 +7,7 @@ import {
   ZoomableGroup,
 } from "react-simple-maps";
 import { Building2, ShieldAlert, Zap } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const GEO_URL =
   "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
@@ -20,8 +21,6 @@ const AFRICA_ISO_CODES = [
   "UGA","ZMB","ZWE",
 ];
 
-// ISO 3166-1 numeric → ISO alpha-3 mapping for African countries
-// world-atlas TopoJSON exposes numeric codes via `id`
 const NUMERIC_TO_ISO3: Record<string, string> = {
   "012":"DZA","024":"AGO","204":"BEN","072":"BWA","854":"BFA","108":"BDI",
   "132":"CPV","120":"CMR","140":"CAF","148":"TCD","174":"COM","178":"COG",
@@ -36,7 +35,7 @@ const NUMERIC_TO_ISO3: Record<string, string> = {
 
 type Signal = "ACCUMULATE" | "HOLD" | "MONITOR";
 
-interface CompanyMarker {
+interface TrackedMarker {
   name: string;
   country: string;
   coordinates: [number, number];
@@ -44,30 +43,18 @@ interface CompanyMarker {
   signal: Signal;
 }
 
-const TRACKED_MARKERS: CompanyMarker[] = [
-  { name: "Dangote Cement", country: "NGA", coordinates: [7.4, 9.0], score: 84, signal: "ACCUMULATE" },
-  { name: "Safaricom", country: "KEN", coordinates: [36.8, -1.3], score: 79, signal: "ACCUMULATE" },
-  { name: "MTN Group", country: "ZAF", coordinates: [28.0, -26.2], score: 72, signal: "ACCUMULATE" },
-  { name: "Transnet", country: "ZAF", coordinates: [18.4, -33.9], score: 51, signal: "MONITOR" },
-  { name: "ESKOM", country: "ZAF", coordinates: [25.7, -29.1], score: 45, signal: "MONITOR" },
-  { name: "Société Générale Maroc", country: "MAR", coordinates: [-7.6, 33.6], score: 68, signal: "HOLD" },
-  { name: "KenGen", country: "KEN", coordinates: [37.1, -0.4], score: 73, signal: "ACCUMULATE" },
-  { name: "SONATEL", country: "SEN", coordinates: [-17.4, 14.7], score: 66, signal: "HOLD" },
-  { name: "NMDC", country: "NGA", coordinates: [8.9, 9.9], score: 58, signal: "HOLD" },
-  { name: "BUA Foods", country: "NGA", coordinates: [3.4, 6.5], score: 71, signal: "ACCUMULATE" },
-];
+interface SanctionsMarker {
+  name: string;
+  coordinates: [number, number];
+  type: "sanctions";
+}
 
-const SANCTIONS_MARKERS = [
-  { name: "Sudan — Active Sanctions", coordinates: [30.2, 15.5] as [number, number], type: "sanctions" },
-  { name: "Ethiopia — Tigray Watch", coordinates: [39.5, 11.6] as [number, number], type: "sanctions" },
-  { name: "DRC — Eastern Zone Alert", coordinates: [29.2, -2.9] as [number, number], type: "sanctions" },
-];
-
-const CATALYST_MARKERS = [
-  { name: "East African Pipeline (EACOP)", coordinates: [32.0, 1.3] as [number, number], type: "catalyst" },
-  { name: "Dangote Refinery — Phase 2", coordinates: [3.3, 6.6] as [number, number], type: "catalyst" },
-  { name: "Cairo Metro Expansion", coordinates: [31.2, 30.1] as [number, number], type: "catalyst" },
-];
+interface CatalystMarker {
+  name: string;
+  coordinates: [number, number];
+  type: "catalyst";
+  company_id?: string;
+}
 
 const SIGNAL_COLOR: Record<Signal, string> = {
   ACCUMULATE: "hsl(155 55% 42%)",
@@ -104,14 +91,104 @@ const NativeWorldMap = ({
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [hoveredMarker, setHoveredMarker] = useState<HoveredMarker | null>(null);
 
+  const [trackedMarkers, setTrackedMarkers] = useState<TrackedMarker[]>([]);
+  const [sanctionsMarkers, setSanctionsMarkers] = useState<SanctionsMarker[]>([]);
+  const [catalystMarkers, setCatalystMarkers] = useState<CatalystMarker[]>([]);
+  const [mapDataLoading, setMapDataLoading] = useState(true);
+
   const africaSet = useMemo(() => new Set(AFRICA_ISO_CODES), []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchAll = async () => {
+      const [companiesRes, contextRes, catalystsRes] = await Promise.all([
+        supabase
+          .from("companies")
+          .select("name, country_code, scout_score, latitude, longitude")
+          .not("latitude", "is", null)
+          .not("longitude", "is", null),
+        supabase
+          .from("country_context")
+          .select("country, country_code, risk_tag, latitude, longitude")
+          .or(
+            "risk_tag.ilike.%sanction%,risk_tag.ilike.%alert%,risk_tag.ilike.%restricted%,risk_tag.ilike.%elevated%",
+          ),
+        supabase
+          .from("catalysts")
+          .select(
+            "id, title, type, company_id, companies:company_id ( name, latitude, longitude )",
+          )
+          .limit(20),
+      ]);
+
+      if (cancelled) return;
+
+      if (!companiesRes.error && companiesRes.data) {
+        const mapped: TrackedMarker[] = companiesRes.data
+          .filter((c: any) => c.latitude != null && c.longitude != null)
+          .map((c: any) => {
+            const score = c.scout_score ?? 0;
+            const signal: Signal =
+              score >= 70 ? "ACCUMULATE" : score >= 55 ? "HOLD" : "MONITOR";
+            return {
+              name: c.name,
+              country: c.country_code ?? "",
+              coordinates: [Number(c.longitude), Number(c.latitude)],
+              score,
+              signal,
+            };
+          });
+        setTrackedMarkers(mapped);
+      } else if (companiesRes.error) {
+        console.error("companies fetch:", companiesRes.error);
+      }
+
+      if (!contextRes.error && contextRes.data) {
+        const mapped: SanctionsMarker[] = contextRes.data
+          .filter((c: any) => c.latitude != null && c.longitude != null)
+          .map((c: any) => ({
+            name: `${c.country} — ${c.risk_tag}`,
+            coordinates: [Number(c.longitude), Number(c.latitude)],
+            type: "sanctions" as const,
+          }));
+        setSanctionsMarkers(mapped);
+      } else if (contextRes.error) {
+        console.error("country_context fetch:", contextRes.error);
+      }
+
+      if (!catalystsRes.error && catalystsRes.data) {
+        const mapped: CatalystMarker[] = (catalystsRes.data as any[])
+          .filter((c) => c.companies?.latitude != null && c.companies?.longitude != null)
+          .map((c) => ({
+            name: `${c.companies.name} — ${c.title ?? c.type ?? "Catalyst"}`,
+            coordinates: [
+              Number(c.companies.longitude),
+              Number(c.companies.latitude),
+            ],
+            type: "catalyst" as const,
+            company_id: c.id,
+          }));
+        setCatalystMarkers(mapped);
+      } else if (catalystsRes.error) {
+        console.error("catalysts fetch:", catalystsRes.error);
+      }
+
+      setMapDataLoading(false);
+    };
+
+    fetchAll();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const toggleLayer = (key: keyof typeof layers) =>
     setLayers((s) => ({ ...s, [key]: !s[key] }));
 
   const handleMarkerEnter = (
     e: React.MouseEvent<SVGGElement>,
-    m: CompanyMarker,
+    m: TrackedMarker,
   ) => {
     const rect = (e.currentTarget.ownerSVGElement?.parentElement as HTMLElement)?.getBoundingClientRect();
     setHoveredMarker({
@@ -221,7 +298,7 @@ const NativeWorldMap = ({
             </Geographies>
 
             {layers.companies &&
-              TRACKED_MARKERS.map((m) => {
+              trackedMarkers.map((m) => {
                 const color = SIGNAL_COLOR[m.signal];
                 return (
                   <Marker
@@ -248,7 +325,7 @@ const NativeWorldMap = ({
               })}
 
             {layers.sanctions &&
-              SANCTIONS_MARKERS.map((m) => (
+              sanctionsMarkers.map((m) => (
                 <Marker key={m.name} coordinates={m.coordinates}>
                   <g transform="rotate(45)">
                     <rect
@@ -266,8 +343,8 @@ const NativeWorldMap = ({
               ))}
 
             {layers.catalysts &&
-              CATALYST_MARKERS.map((m) => (
-                <Marker key={m.name} coordinates={m.coordinates}>
+              catalystMarkers.map((m) => (
+                <Marker key={`${m.company_id}-${m.name}`} coordinates={m.coordinates}>
                   <circle
                     r={6}
                     fill="transparent"
@@ -281,6 +358,14 @@ const NativeWorldMap = ({
               ))}
           </ZoomableGroup>
         </ComposableMap>
+
+        {mapDataLoading && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-card/40 animate-pulse">
+            <span className="text-xs font-mono text-primary">
+              Loading intelligence data...
+            </span>
+          </div>
+        )}
 
         {hoveredMarker && (
           <div
