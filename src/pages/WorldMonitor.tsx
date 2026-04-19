@@ -287,12 +287,18 @@ const WorldMonitor = () => {
             <div className="glass-card rounded-2xl p-6">
               <div className="flex items-center gap-2 border-b border-border/40 pb-3 mb-4">
                 <span className="relative flex h-2.5 w-2.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
-                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                  <span
+                    className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+                    style={{ backgroundColor: 'hsl(155 55% 42%)' }}
+                  />
+                  <span
+                    className="relative inline-flex h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: 'hsl(155 55% 42%)' }}
+                  />
                 </span>
                 <h2 className="font-display text-sm font-bold">
                   Current Regime:{' '}
-                  <span className="text-emerald-500">RISK-ON</span>
+                  <span style={{ color: 'hsl(155 55% 42%)' }}>RISK-ON</span>
                 </h2>
               </div>
               <table className="w-full text-xs">
