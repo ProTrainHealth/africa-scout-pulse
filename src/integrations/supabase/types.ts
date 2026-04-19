@@ -72,6 +72,8 @@ export type Database = {
           id: string
           insider_ownership: number
           institutional_flow: string
+          latitude: number | null
+          longitude: number | null
           market_cap: string
           market_cap_tier: string
           name: string
@@ -90,6 +92,8 @@ export type Database = {
           id?: string
           insider_ownership?: number
           institutional_flow?: string
+          latitude?: number | null
+          longitude?: number | null
           market_cap?: string
           market_cap_tier?: string
           name: string
@@ -108,6 +112,8 @@ export type Database = {
           id?: string
           insider_ownership?: number
           institutional_flow?: string
+          latitude?: number | null
+          longitude?: number | null
           market_cap?: string
           market_cap_tier?: string
           name?: string
@@ -153,24 +159,33 @@ export type Database = {
       country_context: {
         Row: {
           country: string
+          country_code: string | null
           flag_emoji: string
           id: string
+          latitude: number | null
+          longitude: number | null
           regime_status: string
           risk_tag: string
           updated_at: string
         }
         Insert: {
           country: string
+          country_code?: string | null
           flag_emoji?: string
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           regime_status?: string
           risk_tag?: string
           updated_at?: string
         }
         Update: {
           country?: string
+          country_code?: string | null
           flag_emoji?: string
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           regime_status?: string
           risk_tag?: string
           updated_at?: string
