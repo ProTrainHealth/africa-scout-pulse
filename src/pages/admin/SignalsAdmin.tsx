@@ -160,6 +160,7 @@ const SignalsAdmin = () => {
           <div className="flex items-center gap-3 text-xs">
             <Link to="/admin" className="text-muted-foreground hover:text-foreground">Dashboard</Link>
             <Link to="/admin/regime" className="text-muted-foreground hover:text-foreground">Regime</Link>
+            <Link to="/admin/macro" className="text-muted-foreground hover:text-foreground">Macro</Link>
             <Link to="/" className="text-muted-foreground hover:text-foreground">← App</Link>
           </div>
         </div>
