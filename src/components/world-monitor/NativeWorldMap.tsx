@@ -67,6 +67,7 @@ interface NativeWorldMapProps {
   showControls?: boolean;
   className?: string;
   onCountryClick?: (iso3: string) => void;
+  selectedCountryCode?: string | null;
 }
 
 interface HoveredMarker {
