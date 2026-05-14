@@ -83,6 +83,7 @@ const NativeWorldMap = ({
   showControls = true,
   className = "",
   onCountryClick,
+  selectedCountryCode = null,
 }: NativeWorldMapProps) => {
   const [layers, setLayers] = useState({
     companies: true,
