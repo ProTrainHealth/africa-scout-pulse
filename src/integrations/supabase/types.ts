@@ -65,6 +65,7 @@ export type Database = {
         Row: {
           cash_runway: number
           catalyst_date: string
+          city: string | null
           country: string
           country_code: string
           created_at: string
@@ -85,6 +86,7 @@ export type Database = {
         Insert: {
           cash_runway?: number
           catalyst_date?: string
+          city?: string | null
           country: string
           country_code?: string
           created_at?: string
@@ -105,6 +107,7 @@ export type Database = {
         Update: {
           cash_runway?: number
           catalyst_date?: string
+          city?: string | null
           country?: string
           country_code?: string
           created_at?: string
@@ -222,6 +225,39 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      macro_indicators: {
+        Row: {
+          current_value: string
+          id: string
+          indicator: string
+          source: string | null
+          trend: string
+          unit: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          current_value: string
+          id?: string
+          indicator: string
+          source?: string | null
+          trend: string
+          unit?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          current_value?: string
+          id?: string
+          indicator?: string
+          source?: string | null
+          trend?: string
+          unit?: string | null
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }

@@ -67,6 +67,7 @@ interface NativeWorldMapProps {
   showControls?: boolean;
   className?: string;
   onCountryClick?: (iso3: string) => void;
+  selectedCountryCode?: string | null;
 }
 
 interface HoveredMarker {
@@ -82,6 +83,7 @@ const NativeWorldMap = ({
   showControls = true,
   className = "",
   onCountryClick,
+  selectedCountryCode = null,
 }: NativeWorldMapProps) => {
   const [layers, setLayers] = useState({
     companies: true,
@@ -300,6 +302,9 @@ const NativeWorldMap = ({
             {layers.companies &&
               trackedMarkers.map((m) => {
                 const color = SIGNAL_COLOR[m.signal];
+                const dim =
+                  selectedCountryCode != null &&
+                  m.country.toUpperCase() !== selectedCountryCode.toUpperCase();
                 return (
                   <Marker
                     key={m.name}
@@ -307,9 +312,9 @@ const NativeWorldMap = ({
                     onMouseEnter={(e) => handleMarkerEnter(e as any, m)}
                     onMouseLeave={() => setHoveredMarker(null)}
                     style={{
-                      default: { cursor: "pointer" },
-                      hover: { cursor: "pointer" },
-                      pressed: { cursor: "pointer" },
+                      default: { cursor: "pointer", opacity: dim ? 0.25 : 1 },
+                      hover: { cursor: "pointer", opacity: dim ? 0.5 : 1 },
+                      pressed: { cursor: "pointer", opacity: 1 },
                     }}
                   >
                     <circle

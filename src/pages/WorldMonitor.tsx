@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Globe, Lock, ShieldAlert, Activity, Zap } from 'lucide-react';
+import { Globe, Lock, ShieldAlert, Activity, Zap, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
@@ -27,19 +27,43 @@ interface SanctionItem {
   updated_at: string;
 }
 
-interface RegimeRow {
+interface MacroRow {
   indicator: string;
   current_value: string;
   trend: string;
+  unit?: string | null;
+  source?: string | null;
+  updated_at?: string;
 }
 
-const REGIME_FALLBACK: RegimeRow[] = [
-  { indicator: 'USD Index', current_value: '104.2', trend: '↑' },
-  { indicator: 'EM Capital Flows', current_value: 'INFLOW', trend: '↑' },
-  { indicator: 'Brent Crude', current_value: '$87.40', trend: '→' },
-  { indicator: 'SA 10Y Yield', current_value: '9.2%', trend: '↑' },
-  { indicator: 'VIX', current_value: '18.4', trend: '↓' },
-];
+const TREND_GLYPH: Record<string, string> = {
+  rising: '↑',
+  falling: '↓',
+  stable: '→',
+  volatile: '↕',
+};
+
+const TREND_COLOR: Record<string, string> = {
+  rising: 'hsl(155 55% 42%)',
+  falling: 'hsl(0 72% 51%)',
+  stable: 'hsl(220 8% 65%)',
+  volatile: 'hsl(38 100% 50%)',
+};
+
+// ISO3 (from topojson) → ISO2 (matches companies.country_code)
+const ISO3_TO_ISO2: Record<string, string> = {
+  ZAF: 'ZA', NGA: 'NG', KEN: 'KE', EGY: 'EG', MAR: 'MA',
+  GHA: 'GH', ETH: 'ET', TZA: 'TZ', RWA: 'RW', CIV: 'CI',
+  ZMB: 'ZM', AGO: 'AO', MOZ: 'MZ', SEN: 'SN', BWA: 'BW',
+  DZA: 'DZ', TUN: 'TN', LBY: 'LY', SDN: 'SD', UGA: 'UG',
+  CMR: 'CM', COD: 'CD', COG: 'CG', NAM: 'NA', ZWE: 'ZW',
+  MWI: 'MW', MDG: 'MG', MUS: 'MU', BEN: 'BJ', BFA: 'BF',
+  MLI: 'ML', NER: 'NE', GIN: 'GN', SLE: 'SL', LBR: 'LR',
+  TGO: 'TG', GMB: 'GM', GAB: 'GA', GNQ: 'GQ', CAF: 'CF',
+  TCD: 'TD', SOM: 'SO', SSD: 'SS', ERI: 'ER', DJI: 'DJ',
+  BDI: 'BI', LSO: 'LS', SWZ: 'SZ', MRT: 'MR', GNB: 'GW',
+  CPV: 'CV', COM: 'KM', STP: 'ST',
+};
 
 const Dot = ({ color }: { color: string }) => (
   <svg width="8" height="8" viewBox="0 0 8 8" className="shrink-0">
@@ -65,8 +89,10 @@ const WorldMonitor = () => {
 
   const [catalysts, setCatalysts] = useState<CatalystItem[]>([]);
   const [sanctions, setSanctions] = useState<SanctionItem[]>([]);
-  const [regimeData, setRegimeData] = useState<RegimeRow[]>([]);
+  const [macroData, setMacroData] = useState<MacroRow[]>([]);
   const [panelLoading, setPanelLoading] = useState(true);
+  const [selectedIso2, setSelectedIso2] = useState<string | null>(null);
+  const [selectedCountryName, setSelectedCountryName] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = 'World Monitor — Omni-Scout Africa';
@@ -80,21 +106,25 @@ const WorldMonitor = () => {
 
     let cancelled = false;
     const fetchPanelData = async () => {
-      const [catResult, sancResult] = await Promise.all([
+      const [catResult, sancResult, macroResult] = await Promise.all([
         supabase
           .from('catalysts')
           .select(
-            `id, title, type, notes, event_date, companies:company_id ( name, country_code, sector )`,
+            `id, title, type, notes, event_date, companies:company_id ( name, country, country_code, sector )`,
           )
           .order('event_date', { ascending: true })
-          .limit(8),
+          .limit(30),
         supabase
           .from('country_context')
           .select('country, country_code, risk_tag, regime_status, updated_at')
           .or(
             'risk_tag.ilike.%sanction%,risk_tag.ilike.%alert%,risk_tag.ilike.%restricted%,risk_tag.ilike.%elevated%',
           )
-          .limit(6),
+          .limit(8),
+        supabase
+          .from('macro_indicators')
+          .select('indicator, current_value, trend, unit, source, updated_at')
+          .order('indicator'),
       ]);
 
       if (cancelled) return;
@@ -129,8 +159,12 @@ const WorldMonitor = () => {
         console.error('sanctions panel fetch:', sancResult.error);
       }
 
-      // Macro regime: no source table yet — keep fallback.
-      setRegimeData([]);
+      if (!macroResult.error && macroResult.data) {
+        setMacroData(macroResult.data as MacroRow[]);
+      } else if (macroResult.error) {
+        console.error('macro_indicators fetch:', macroResult.error);
+      }
+
       setPanelLoading(false);
     };
 
@@ -139,6 +173,36 @@ const WorldMonitor = () => {
       cancelled = true;
     };
   }, [hasAccess]);
+
+  const filteredCatalysts = useMemo(() => {
+    if (!selectedIso2) return catalysts.slice(0, 8);
+    return catalysts.filter(
+      (c) => (c.country_code ?? '').toUpperCase() === selectedIso2.toUpperCase(),
+    );
+  }, [catalysts, selectedIso2]);
+
+  const handleCountryClick = (iso3: string) => {
+    const iso2 = ISO3_TO_ISO2[iso3];
+    if (!iso2) return;
+    if (selectedIso2 === iso2) {
+      setSelectedIso2(null);
+      setSelectedCountryName(null);
+      return;
+    }
+    setSelectedIso2(iso2);
+    // Resolve a friendly country name from data we already have.
+    const fromCatalyst = catalysts.find(
+      (c) => c.country_code?.toUpperCase() === iso2,
+    );
+    const fromSanction = sanctions.find(
+      (s) => s.country_code?.toUpperCase() === iso2,
+    );
+    setSelectedCountryName(
+      fromCatalyst?.company_name ? null : fromSanction?.country_name ?? null,
+    );
+    // Prefer sanction country name if available; otherwise leave null and show ISO2.
+    if (fromSanction?.country_name) setSelectedCountryName(fromSanction.country_name);
+  };
 
   if (isLoading) {
     return (
@@ -177,7 +241,7 @@ const WorldMonitor = () => {
     );
   }
 
-  const regimeRows = regimeData.length > 0 ? regimeData : REGIME_FALLBACK;
+  const filterLabel = selectedCountryName ?? selectedIso2;
 
   return (
     <div className="min-h-screen bg-background">
@@ -192,16 +256,31 @@ const WorldMonitor = () => {
             </h1>
             <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
               Live catalyst tracking, sanctions overlays, and institutional signals across Africa's infrastructure landscape.
+              {filterLabel && (
+                <span className="ml-2 text-primary">· Filtered: {filterLabel}</span>
+              )}
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {selectedIso2 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setSelectedIso2(null);
+                  setSelectedCountryName(null);
+                }}
+              >
+                <X className="mr-1 h-3 w-3" /> Clear filter
+              </Button>
+            )}
             <div className="flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5">
               <Activity className="h-3.5 w-3.5 text-primary" />
               <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-primary">
                 LIVE FEED
               </span>
             </div>
-            <div className="flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5">
+            <div className="hidden sm:flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5">
               <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-primary">
                 50 COMPANIES
               </span>
@@ -211,7 +290,12 @@ const WorldMonitor = () => {
 
         {/* Map */}
         <div className="glass-card glow-brand rounded-2xl overflow-hidden p-4">
-          <NativeWorldMap showControls={true} height={520} />
+          <NativeWorldMap
+            showControls={true}
+            height={520}
+            onCountryClick={handleCountryClick}
+            selectedCountryCode={selectedIso2}
+          />
 
           {/* Legend */}
           <div className="mt-4 flex flex-wrap items-center gap-6 border-t border-border/40 pt-3 text-xs">
@@ -256,6 +340,9 @@ const WorldMonitor = () => {
               </svg>
               <span className="font-mono uppercase tracking-wider text-muted-foreground">Active Catalyst</span>
             </div>
+            <span className="ml-auto text-[10px] font-mono text-muted-foreground/70">
+              Click an African country to filter
+            </span>
           </div>
         </div>
 
@@ -266,6 +353,11 @@ const WorldMonitor = () => {
             <div className="flex items-center gap-2 border-b border-border/40 pb-3 mb-4">
               <Zap className="h-4 w-4 text-primary" />
               <h2 className="font-display text-lg font-bold">Active Catalysts</h2>
+              {filterLabel && (
+                <span className="ml-auto rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-mono font-bold uppercase text-primary">
+                  {filterLabel}
+                </span>
+              )}
             </div>
             {panelLoading ? (
               <div className="space-y-3">
@@ -273,13 +365,29 @@ const WorldMonitor = () => {
                   <Skeleton key={i} className="h-10 w-full rounded-lg" />
                 ))}
               </div>
-            ) : catalysts.length === 0 ? (
-              <div className="text-xs text-muted-foreground py-6 text-center">
-                No catalyst events found.
+            ) : filteredCatalysts.length === 0 ? (
+              <div className="text-xs text-muted-foreground py-6 text-center space-y-2">
+                <div>
+                  {selectedIso2
+                    ? `No recent catalysts for ${filterLabel}.`
+                    : 'No catalyst events found.'}
+                </div>
+                {selectedIso2 && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setSelectedIso2(null);
+                      setSelectedCountryName(null);
+                    }}
+                  >
+                    Show all countries
+                  </Button>
+                )}
               </div>
             ) : (
               <ul className="divide-y divide-border/30">
-                {catalysts.map((c) => (
+                {filteredCatalysts.map((c) => (
                   <li key={c.id} className="py-3 flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <div className="font-semibold text-sm text-foreground">{c.event_type}</div>
@@ -358,7 +466,7 @@ const WorldMonitor = () => {
               )}
             </div>
 
-            {/* Macro Regime mini-card */}
+            {/* Macro Regime — wired to macro_indicators */}
             <div className="glass-card rounded-2xl p-6">
               <div className="flex items-center gap-2 border-b border-border/40 pb-3 mb-4">
                 <span className="relative flex h-2.5 w-2.5">
@@ -371,23 +479,65 @@ const WorldMonitor = () => {
                     style={{ backgroundColor: 'hsl(155 55% 42%)' }}
                   />
                 </span>
-                <h2 className="font-display text-sm font-bold">
-                  Current Regime:{' '}
-                  <span style={{ color: 'hsl(155 55% 42%)' }}>RISK-ON</span>
-                </h2>
+                <h2 className="font-display text-sm font-bold">Macro Regime</h2>
               </div>
-              <table className="w-full text-xs">
-                <tbody>
-                  {regimeRows.map((r) => (
-                    <tr key={r.indicator} className="border-b border-border/20 last:border-0">
-                      <td className="py-2 text-muted-foreground">{r.indicator}</td>
-                      <td className="py-2 text-right font-mono font-semibold text-foreground">
-                        {r.current_value} {r.trend}
-                      </td>
-                    </tr>
+
+              {panelLoading ? (
+                <div className="space-y-3">
+                  {[0, 1, 2].map((i) => (
+                    <Skeleton key={i} className="h-10 w-full rounded-lg" />
                   ))}
-                </tbody>
-              </table>
+                </div>
+              ) : macroData.length === 0 ? (
+                <div className="py-6 text-center space-y-1">
+                  <p className="text-xs text-muted-foreground">No macro data configured.</p>
+                  {isAdmin && (
+                    <p className="text-[10px] text-muted-foreground/70">
+                      Add indicators at /admin/macro
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <ul className="divide-y divide-border/20">
+                    {macroData.map((m) => {
+                      const glyph = TREND_GLYPH[m.trend] ?? '→';
+                      const color = TREND_COLOR[m.trend] ?? 'hsl(220 8% 65%)';
+                      return (
+                        <li key={m.indicator} className="py-2 flex items-center justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs text-foreground truncate" title={m.indicator}>
+                              {m.indicator}
+                            </div>
+                            {m.source && (
+                              <div className="text-[10px] text-muted-foreground/70 truncate">
+                                {m.source}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 whitespace-nowrap">
+                            <span className="font-mono font-semibold tabular-nums text-sm text-foreground">
+                              {m.current_value}
+                            </span>
+                            <span
+                              className="font-mono text-xs font-bold"
+                              style={{ color }}
+                              title={m.trend}
+                            >
+                              {glyph}
+                            </span>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {macroData[0]?.updated_at && (
+                    <div className="mt-3 pt-2 border-t border-border/20 font-mono text-[10px] text-muted-foreground/70">
+                      Updated {formatDate(macroData[0].updated_at)}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
