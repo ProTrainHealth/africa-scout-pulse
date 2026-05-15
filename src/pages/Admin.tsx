@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import CompanyForm from '@/components/CompanyForm';
 import ScoutScoreBar from '@/components/ScoutScoreBar';
+import ScoutScoreBreakdown from '@/components/ScoutScoreBreakdown';
 import SectorBadge from '@/components/SectorBadge';
 import AdminRequestsQueue from '@/components/AdminRequestsQueue';
 import AdminResourcesManager from '@/components/AdminResourcesManager';
@@ -28,6 +29,11 @@ type CompanyRow = {
   institutional_flow: string;
   market_cap: string;
   description: string;
+  governance_score?: number;
+  liquidity_score?: number;
+  infrastructure_score?: number;
+  regulatory_score?: number;
+  catalyst_score?: number;
 };
 
 const Admin = () => {
@@ -161,7 +167,19 @@ const Admin = () => {
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">{c.country}</td>
                         <td className="px-4 py-3">
-                          <ScoutScoreBar score={c.scout_score} />
+                          <div className="flex items-center gap-2">
+                            <ScoutScoreBar score={c.scout_score} />
+                            <ScoutScoreBreakdown
+                              score={c.scout_score}
+                              parts={{
+                                governance: c.governance_score,
+                                liquidity: c.liquidity_score,
+                                infrastructure: c.infrastructure_score,
+                                regulatory: c.regulatory_score,
+                                catalyst: c.catalyst_score,
+                              }}
+                            />
+                          </div>
                         </td>
                         <td className="px-4 py-3 font-display font-medium">{c.market_cap}</td>
                         <td className="px-4 py-3">
