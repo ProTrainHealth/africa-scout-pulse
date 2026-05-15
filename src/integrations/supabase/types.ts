@@ -65,20 +65,25 @@ export type Database = {
         Row: {
           cash_runway: number
           catalyst_date: string
+          catalyst_score: number
           city: string | null
           country: string
           country_code: string
           created_at: string
           description: string
+          governance_score: number
           id: string
+          infrastructure_score: number
           insider_ownership: number
           institutional_flow: string
           latitude: number | null
+          liquidity_score: number
           longitude: number | null
           market_cap: string
           market_cap_tier: string
           name: string
           next_catalyst: string
+          regulatory_score: number
           scout_score: number
           sector: string
           updated_at: string
@@ -86,20 +91,25 @@ export type Database = {
         Insert: {
           cash_runway?: number
           catalyst_date?: string
+          catalyst_score?: number
           city?: string | null
           country: string
           country_code?: string
           created_at?: string
           description?: string
+          governance_score?: number
           id?: string
+          infrastructure_score?: number
           insider_ownership?: number
           institutional_flow?: string
           latitude?: number | null
+          liquidity_score?: number
           longitude?: number | null
           market_cap?: string
           market_cap_tier?: string
           name: string
           next_catalyst?: string
+          regulatory_score?: number
           scout_score?: number
           sector: string
           updated_at?: string
@@ -107,20 +117,25 @@ export type Database = {
         Update: {
           cash_runway?: number
           catalyst_date?: string
+          catalyst_score?: number
           city?: string | null
           country?: string
           country_code?: string
           created_at?: string
           description?: string
+          governance_score?: number
           id?: string
+          infrastructure_score?: number
           insider_ownership?: number
           institutional_flow?: string
           latitude?: number | null
+          liquidity_score?: number
           longitude?: number | null
           market_cap?: string
           market_cap_tier?: string
           name?: string
           next_catalyst?: string
+          regulatory_score?: number
           scout_score?: number
           sector?: string
           updated_at?: string
