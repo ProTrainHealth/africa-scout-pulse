@@ -123,6 +123,9 @@ const NativeWorldMap = ({
             "id, title, type, company_id, companies:company_id ( name, latitude, longitude )",
           )
           .limit(20),
+        supabase
+          .from("country_context")
+          .select("country, country_code, heat_intensity"),
       ]);
 
       if (cancelled) return;
@@ -175,6 +178,18 @@ const NativeWorldMap = ({
         setCatalystMarkers(mapped);
       } else if (catalystsRes.error) {
         console.error("catalysts fetch:", catalystsRes.error);
+      }
+
+      if (!heatRes.error && heatRes.data) {
+        const lookup: Record<string, number> = {};
+        for (const row of heatRes.data as any[]) {
+          const v = Math.max(0, Math.min(100, Number(row.heat_intensity) || 0));
+          if (row.country_code) lookup[String(row.country_code).toUpperCase()] = v;
+          if (row.country) lookup[String(row.country).toUpperCase()] = v;
+        }
+        setHeatByCode(lookup);
+      } else if (heatRes.error) {
+        console.error("heat_intensity fetch:", heatRes.error);
       }
 
       setMapDataLoading(false);
@@ -250,12 +265,24 @@ const NativeWorldMap = ({
                   const iso3 = NUMERIC_TO_ISO3[numericId];
                   const isAfrica = iso3 ? africaSet.has(iso3) : false;
                   const isSelected = iso3 && iso3 === selectedCountry;
+                  const geoName: string = (geo.properties as any)?.name ?? "";
+                  const heat = isAfrica
+                    ? (heatByCode[iso3 ?? ""] ?? heatByCode[geoName.toUpperCase()] ?? 0)
+                    : 0;
+                  // Color ramp: 0 = neutral dark, 100 = hot red. Amber midpoint.
+                  const heatFill =
+                    heat >= 70 ? `hsl(0 72% 51% / ${0.25 + (heat - 70) * 0.012})`
+                    : heat >= 40 ? `hsl(38 100% 50% / ${0.15 + (heat - 40) * 0.008})`
+                    : heat > 0   ? `hsl(155 55% 42% / ${0.1 + heat * 0.004})`
+                    : null;
 
                   const baseFill = isSelected
                     ? "hsl(38 100% 50% / 0.2)"
-                    : isAfrica
-                      ? "hsl(220 15% 14%)"
-                      : "hsl(220 15% 8%)";
+                    : heatFill
+                      ? heatFill
+                      : isAfrica
+                        ? "hsl(220 15% 14%)"
+                        : "hsl(220 15% 8%)";
 
                   return (
                     <Geography
