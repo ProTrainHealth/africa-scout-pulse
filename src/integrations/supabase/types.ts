@@ -179,6 +179,7 @@ export type Database = {
           country: string
           country_code: string | null
           flag_emoji: string
+          heat_intensity: number
           id: string
           latitude: number | null
           longitude: number | null
@@ -190,6 +191,7 @@ export type Database = {
           country: string
           country_code?: string | null
           flag_emoji?: string
+          heat_intensity?: number
           id?: string
           latitude?: number | null
           longitude?: number | null
@@ -201,6 +203,7 @@ export type Database = {
           country?: string
           country_code?: string | null
           flag_emoji?: string
+          heat_intensity?: number
           id?: string
           latitude?: number | null
           longitude?: number | null
