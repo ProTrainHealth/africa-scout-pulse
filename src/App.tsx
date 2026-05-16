@@ -17,6 +17,7 @@ import Pricing from "./pages/Pricing";
 import Checkout from "./pages/Checkout";
 import OrderHistory from "./pages/OrderHistory";
 import WorldMonitor from "./pages/WorldMonitor";
+import CompanyDetail from "./pages/CompanyDetail";
 import Watchlist from "./pages/Watchlist";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -55,6 +56,7 @@ const App = () => {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/orders" element={<OrderHistory />} />
           <Route path="/world-monitor" element={<WorldMonitor />} />
+          <Route path="/company/:id" element={<CompanyDetail />} />
           <Route path="/watchlist" element={<Watchlist />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<NotFound />} />
