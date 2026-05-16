@@ -22,6 +22,11 @@ type CompanyRow = {
   institutional_flow: string;
   market_cap: string;
   description: string;
+  governance_score?: number;
+  liquidity_score?: number;
+  infrastructure_score?: number;
+  regulatory_score?: number;
+  catalyst_score?: number;
 };
 
 type Props = {
@@ -40,11 +45,14 @@ const COUNTRY_CODES: Record<string, string> = {
 const CompanyForm = ({ open, onOpenChange, company, onSaved }: Props) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    name: '', sector: SECTORS[0], country: COUNTRIES[0], cash_runway: 0,
+  const emptyForm = {
+    name: '', sector: SECTORS[0] as string, country: COUNTRIES[0] as string, cash_runway: 0,
     insider_ownership: 0, scout_score: 50, next_catalyst: '', catalyst_date: '',
     institutional_flow: 'neutral', market_cap: '', description: '',
-  });
+    governance_score: 0, liquidity_score: 0, infrastructure_score: 0,
+    regulatory_score: 0, catalyst_score: 0,
+  };
+  const [form, setForm] = useState(emptyForm);
 
   useEffect(() => {
     if (company) {
@@ -54,26 +62,34 @@ const CompanyForm = ({ open, onOpenChange, company, onSaved }: Props) => {
         scout_score: company.scout_score, next_catalyst: company.next_catalyst,
         catalyst_date: company.catalyst_date, institutional_flow: company.institutional_flow,
         market_cap: company.market_cap, description: company.description,
+        governance_score: company.governance_score ?? 0,
+        liquidity_score: company.liquidity_score ?? 0,
+        infrastructure_score: company.infrastructure_score ?? 0,
+        regulatory_score: company.regulatory_score ?? 0,
+        catalyst_score: company.catalyst_score ?? 0,
       });
     } else {
-      setForm({
-        name: '', sector: SECTORS[0], country: COUNTRIES[0], cash_runway: 0,
-        insider_ownership: 0, scout_score: 50, next_catalyst: '', catalyst_date: '',
-        institutional_flow: 'neutral', market_cap: '', description: '',
-      });
+      setForm(emptyForm);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
+    const clamp = (n: any) => Math.min(100, Math.max(0, Number(n) || 0));
     const payload = {
       ...form,
       country_code: COUNTRY_CODES[form.country] || '',
       cash_runway: Number(form.cash_runway),
       insider_ownership: Number(form.insider_ownership),
-      scout_score: Math.min(100, Math.max(0, Number(form.scout_score))),
+      scout_score: clamp(form.scout_score),
+      governance_score: clamp(form.governance_score),
+      liquidity_score: clamp(form.liquidity_score),
+      infrastructure_score: clamp(form.infrastructure_score),
+      regulatory_score: clamp(form.regulatory_score),
+      catalyst_score: clamp(form.catalyst_score),
     };
 
     try {
@@ -171,6 +187,31 @@ const CompanyForm = ({ open, onOpenChange, company, onSaved }: Props) => {
           <div className="space-y-2">
             <Label>Description</Label>
             <Textarea value={form.description} onChange={(e) => set('description', e.target.value)} maxLength={500} rows={3} />
+          </div>
+
+          <div className="rounded-lg border border-border/50 p-3 space-y-2">
+            <div className="flex items-baseline justify-between">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Scout Score Breakdown (G/L/I/R/C)</Label>
+              <span className="text-[10px] font-mono text-muted-foreground">weights 25/20/20/20/15</span>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              {([
+                ['governance_score', 'G'],
+                ['liquidity_score', 'L'],
+                ['infrastructure_score', 'I'],
+                ['regulatory_score', 'R'],
+                ['catalyst_score', 'C'],
+              ] as const).map(([k, letter]) => (
+                <div key={k} className="space-y-1">
+                  <Label className="text-[10px] font-mono text-accent">{letter}</Label>
+                  <Input
+                    type="number" min={0} max={100}
+                    value={(form as any)[k]}
+                    onChange={(e) => set(k, e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
 
           <Button type="submit" className="w-full" disabled={loading}>

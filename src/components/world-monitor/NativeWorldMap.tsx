@@ -96,6 +96,7 @@ const NativeWorldMap = ({
   const [trackedMarkers, setTrackedMarkers] = useState<TrackedMarker[]>([]);
   const [sanctionsMarkers, setSanctionsMarkers] = useState<SanctionsMarker[]>([]);
   const [catalystMarkers, setCatalystMarkers] = useState<CatalystMarker[]>([]);
+  const [heatByCode, setHeatByCode] = useState<Record<string, number>>({});
   const [mapDataLoading, setMapDataLoading] = useState(true);
 
   const africaSet = useMemo(() => new Set(AFRICA_ISO_CODES), []);
@@ -104,7 +105,7 @@ const NativeWorldMap = ({
     let cancelled = false;
 
     const fetchAll = async () => {
-      const [companiesRes, contextRes, catalystsRes] = await Promise.all([
+      const [companiesRes, contextRes, catalystsRes, heatRes] = await Promise.all([
         supabase
           .from("companies")
           .select("name, country_code, scout_score, latitude, longitude")
