@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Globe, Star, BookOpen, Settings2,
-  LogOut, Menu, Activity, Calendar, TrendingUp, Users, Gauge, Shield,
+  LogOut, Menu, Activity, Calendar, TrendingUp, Users, Gauge, Shield, LineChart, Radio,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 
 /* ── Sidebar nav ── */
 const SIDEBAR_ITEMS = [
