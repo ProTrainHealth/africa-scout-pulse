@@ -276,6 +276,16 @@ const WorldMonitor = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {(compareA || compareB) && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setCompareOpen(true)}
+              >
+                <ArrowLeftRight className="mr-1 h-3 w-3" />
+                Compare ({[compareA, compareB].filter(Boolean).join(' vs ')})
+              </Button>
+            )}
             {selectedIso2 && (
               <Button
                 size="sm"
@@ -283,6 +293,8 @@ const WorldMonitor = () => {
                 onClick={() => {
                   setSelectedIso2(null);
                   setSelectedCountryName(null);
+                  setCompareA(null);
+                  setCompareB(null);
                 }}
               >
                 <X className="mr-1 h-3 w-3" /> Clear filter
