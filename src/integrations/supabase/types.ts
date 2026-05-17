@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      briefings: {
+        Row: {
+          analyst_id: string | null
+          briefing_date: string
+          company_id: string | null
+          created_at: string
+          duration_seconds: number
+          id: string
+          storage_path: string
+          title: string
+          transcript: string
+          updated_at: string
+        }
+        Insert: {
+          analyst_id?: string | null
+          briefing_date?: string
+          company_id?: string | null
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          storage_path?: string
+          title?: string
+          transcript?: string
+          updated_at?: string
+        }
+        Update: {
+          analyst_id?: string | null
+          briefing_date?: string
+          company_id?: string | null
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          storage_path?: string
+          title?: string
+          transcript?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "briefings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       catalysts: {
         Row: {
           company_id: string
@@ -343,6 +390,36 @@ export type Database = {
           email?: string | null
           id?: string
           timezone?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_agent?: string | null
           user_id?: string
         }
         Relationships: []

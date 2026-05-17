@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Globe, Star, BookOpen, Settings2,
-  LogOut, Menu, Activity, Calendar, TrendingUp, Users, Gauge, Shield,
+  LogOut, Menu, Activity, Calendar, TrendingUp, Users, Gauge, Shield, LineChart, Radio,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 
 /* ── Sidebar nav ── */
 const SIDEBAR_ITEMS = [
@@ -239,6 +240,120 @@ const Dashboard = () => {
                 </div>
               </div>
             ))}
+          </section>
+
+          {/* ZONE 2.5 — 4-panel resizable terminal */}
+          <section className="glass-card rounded-xl overflow-hidden hidden lg:block" style={{ height: 520 }}>
+            <ResizablePanelGroup direction="horizontal" className="h-full">
+              <ResizablePanel defaultSize={32} minSize={20}>
+                <div className="flex h-full flex-col">
+                  <div className="flex items-center gap-2 px-3 py-2 border-b border-border/40 bg-secondary/30">
+                    <LayoutDashboard className="h-3.5 w-3.5 text-primary" />
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider">Ledger</span>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                    {LEDGER.slice(0, 10).map((r) => (
+                      <div key={r.company} className="flex items-center justify-between rounded px-2 py-1.5 text-xs hover:bg-secondary/50">
+                        <div className="min-w-0">
+                          <div className="font-semibold truncate">{r.company}</div>
+                          <div className="text-[10px] text-muted-foreground">{r.country}</div>
+                        </div>
+                        <div className={`font-mono font-bold tabular-nums ${scoreColor(r.score)}`}>{r.score}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={28} minSize={18}>
+                <ResizablePanelGroup direction="vertical" className="h-full">
+                  <ResizablePanel defaultSize={55} minSize={25}>
+                    <div className="flex h-full flex-col">
+                      <div className="flex items-center gap-2 px-3 py-2 border-b border-border/40 bg-secondary/30">
+                        <LineChart className="h-3.5 w-3.5 text-accent" />
+                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider">Score Pulse — 30d</span>
+                      </div>
+                      <div className="flex-1 flex items-center justify-center p-3">
+                        <svg viewBox="0 0 200 80" className="w-full h-full" preserveAspectRatio="none">
+                          <polyline fill="none" stroke="hsl(38 100% 50%)" strokeWidth="1.5"
+                            points="0,55 15,52 30,48 45,50 60,42 75,38 90,40 105,32 120,28 135,30 150,22 165,18 180,15 200,12" />
+                          <polyline fill="hsl(38 100% 50% / 0.1)" stroke="none"
+                            points="0,55 15,52 30,48 45,50 60,42 75,38 90,40 105,32 120,28 135,30 150,22 165,18 180,15 200,12 200,80 0,80" />
+                        </svg>
+                      </div>
+                    </div>
+                  </ResizablePanel>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel defaultSize={45} minSize={20}>
+                    <div className="flex h-full flex-col">
+                      <div className="flex items-center gap-2 px-3 py-2 border-b border-border/40 bg-secondary/30">
+                        <Gauge className="h-3.5 w-3.5 text-primary" />
+                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider">Regime</span>
+                      </div>
+                      <div className="flex-1 overflow-y-auto p-2">
+                        {REGIME_ROWS.map((row) => (
+                          <div key={row.label} className="flex items-center justify-between py-1 text-xs">
+                            <span className="text-muted-foreground truncate pr-2">{row.label}</span>
+                            <span className={`font-mono font-bold text-[10px] ${
+                              row.tone === 'good' ? 'text-accent' : row.tone === 'risk' ? 'text-destructive' : 'text-primary'
+                            }`}>{row.status}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </ResizablePanel>
+                </ResizablePanelGroup>
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={22} minSize={15}>
+                <div className="flex h-full flex-col">
+                  <div className="flex items-center gap-2 px-3 py-2 border-b border-border/40 bg-secondary/30">
+                    <Calendar className="h-3.5 w-3.5 text-primary" />
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider">Catalysts</span>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                    <div className="rounded border border-primary/30 bg-primary/5 p-2">
+                      <div className="text-[10px] font-mono text-primary">{TOP_CATALYST.date}</div>
+                      <div className="font-semibold text-xs mt-0.5">{TOP_CATALYST.company}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">{TOP_CATALYST.type}</div>
+                    </div>
+                    {LEDGER.slice(0, 5).map((r) => (
+                      <div key={r.company} className="rounded border border-border/30 p-2">
+                        <div className="text-[10px] font-mono text-muted-foreground">Q2 Earnings</div>
+                        <div className="font-semibold text-xs mt-0.5 truncate">{r.company}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={18} minSize={12}>
+                <div className="flex h-full flex-col">
+                  <div className="flex items-center gap-2 px-3 py-2 border-b border-border/40 bg-secondary/30">
+                    <Radio className="h-3.5 w-3.5 text-accent" />
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider">Macro</span>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-2 space-y-2 text-xs">
+                    {[
+                      { l: 'USD/ZAR', v: '18.42', t: '+0.3%', up: false },
+                      { l: 'Brent',   v: '$82.1', t: '-0.8%', up: false },
+                      { l: 'NGX-30',  v: '47,820', t: '+1.2%', up: true },
+                      { l: 'EGX-30',  v: '24,510', t: '-0.4%', up: false },
+                      { l: 'NSE-20',  v: '1,742', t: '+0.6%', up: true },
+                      { l: 'Africa CDS', v: '342bp', t: '-5bp', up: true },
+                    ].map((m) => (
+                      <div key={m.l} className="flex items-center justify-between border-b border-border/20 pb-1.5">
+                        <span className="text-muted-foreground">{m.l}</span>
+                        <div className="text-right">
+                          <div className="font-mono font-bold tabular-nums">{m.v}</div>
+                          <div className={`font-mono text-[10px] ${m.up ? 'text-accent' : 'text-destructive'}`}>{m.t}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
           </section>
 
           {/* ZONE 3 — Two-column: Ledger (60%) + side stack (40%) */}

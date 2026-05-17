@@ -13,6 +13,7 @@ import ScoutScoreBreakdown from '@/components/ScoutScoreBreakdown';
 import SectorBadge from '@/components/SectorBadge';
 import AdminRequestsQueue from '@/components/AdminRequestsQueue';
 import AdminResourcesManager from '@/components/AdminResourcesManager';
+import AdminBriefingsManager from '@/components/AdminBriefingsManager';
 import type { Sector } from '@/lib/types';
 
 type CompanyRow = {
@@ -129,6 +130,7 @@ const Admin = () => {
           <TabsList className="mb-6">
             <TabsTrigger value="companies">Companies</TabsTrigger>
             <TabsTrigger value="resources">Resources</TabsTrigger>
+            <TabsTrigger value="briefings">Briefings</TabsTrigger>
             <TabsTrigger value="requests">Feature Requests</TabsTrigger>
           </TabsList>
 
@@ -205,6 +207,10 @@ const Admin = () => {
 
           <TabsContent value="resources">
             <AdminResourcesManager />
+          </TabsContent>
+
+          <TabsContent value="briefings">
+            <AdminBriefingsManager />
           </TabsContent>
 
           <TabsContent value="requests">

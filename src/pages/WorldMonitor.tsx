@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Globe, Lock, ShieldAlert, Activity, Zap, X } from 'lucide-react';
+import { Globe, Lock, ShieldAlert, Activity, Zap, X, ArrowLeftRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
 import NativeWorldMap from '@/components/world-monitor/NativeWorldMap';
+import CountryCompareDrawer from '@/components/CountryCompareDrawer';
 import { supabase } from '@/integrations/supabase/client';
 
 interface CatalystItem {
@@ -93,6 +94,9 @@ const WorldMonitor = () => {
   const [panelLoading, setPanelLoading] = useState(true);
   const [selectedIso2, setSelectedIso2] = useState<string | null>(null);
   const [selectedCountryName, setSelectedCountryName] = useState<string | null>(null);
+  const [compareA, setCompareA] = useState<string | null>(null);
+  const [compareB, setCompareB] = useState<string | null>(null);
+  const [compareOpen, setCompareOpen] = useState(false);
 
   useEffect(() => {
     document.title = 'World Monitor — Omni-Scout Africa';
@@ -184,24 +188,34 @@ const WorldMonitor = () => {
   const handleCountryClick = (iso3: string) => {
     const iso2 = ISO3_TO_ISO2[iso3];
     if (!iso2) return;
+
+    // Click-to-compare: first click sets A, second sets B and opens drawer,
+    // third click on a 3rd country resets to single selection.
+    if (!compareA) {
+      setCompareA(iso2);
+    } else if (compareA === iso2) {
+      setCompareA(null);
+      setCompareB(null);
+      setCompareOpen(false);
+    } else if (!compareB) {
+      setCompareB(iso2);
+      setCompareOpen(true);
+    } else {
+      setCompareA(iso2);
+      setCompareB(null);
+      setCompareOpen(false);
+    }
+
     if (selectedIso2 === iso2) {
       setSelectedIso2(null);
       setSelectedCountryName(null);
       return;
     }
     setSelectedIso2(iso2);
-    // Resolve a friendly country name from data we already have.
-    const fromCatalyst = catalysts.find(
-      (c) => c.country_code?.toUpperCase() === iso2,
-    );
     const fromSanction = sanctions.find(
       (s) => s.country_code?.toUpperCase() === iso2,
     );
-    setSelectedCountryName(
-      fromCatalyst?.company_name ? null : fromSanction?.country_name ?? null,
-    );
-    // Prefer sanction country name if available; otherwise leave null and show ISO2.
-    if (fromSanction?.country_name) setSelectedCountryName(fromSanction.country_name);
+    setSelectedCountryName(fromSanction?.country_name ?? null);
   };
 
   if (isLoading) {
@@ -262,6 +276,16 @@ const WorldMonitor = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {(compareA || compareB) && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setCompareOpen(true)}
+              >
+                <ArrowLeftRight className="mr-1 h-3 w-3" />
+                Compare ({[compareA, compareB].filter(Boolean).join(' vs ')})
+              </Button>
+            )}
             {selectedIso2 && (
               <Button
                 size="sm"
@@ -269,6 +293,8 @@ const WorldMonitor = () => {
                 onClick={() => {
                   setSelectedIso2(null);
                   setSelectedCountryName(null);
+                  setCompareA(null);
+                  setCompareB(null);
                 }}
               >
                 <X className="mr-1 h-3 w-3" /> Clear filter
@@ -542,6 +568,18 @@ const WorldMonitor = () => {
           </div>
         </div>
       </div>
+
+      <CountryCompareDrawer
+        iso2A={compareA}
+        iso2B={compareB}
+        open={compareOpen}
+        onOpenChange={setCompareOpen}
+        onClear={() => {
+          setCompareA(null);
+          setCompareB(null);
+          setCompareOpen(false);
+        }}
+      />
     </div>
   );
 };

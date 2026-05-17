@@ -20,6 +20,8 @@ import WorldMonitor from "./pages/WorldMonitor";
 import CompanyDetail from "./pages/CompanyDetail";
 import Watchlist from "./pages/Watchlist";
 import Settings from "./pages/Settings";
+import Transparency from "./pages/Transparency";
+import Briefings from "./pages/Briefings";
 import NotFound from "./pages/NotFound";
 import CommandPalette from "./components/CommandPalette";
 
@@ -59,6 +61,8 @@ const App = () => {
           <Route path="/company/:id" element={<CompanyDetail />} />
           <Route path="/watchlist" element={<Watchlist />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/transparency" element={<Transparency />} />
+          <Route path="/briefings" element={<Briefings />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
