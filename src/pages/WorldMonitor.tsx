@@ -568,6 +568,18 @@ const WorldMonitor = () => {
           </div>
         </div>
       </div>
+
+      <CountryCompareDrawer
+        iso2A={compareA}
+        iso2B={compareB}
+        open={compareOpen}
+        onOpenChange={setCompareOpen}
+        onClear={() => {
+          setCompareA(null);
+          setCompareB(null);
+          setCompareOpen(false);
+        }}
+      />
     </div>
   );
 };
