@@ -103,10 +103,13 @@ const Auth = () => {
 
         <div className="relative z-10 space-y-8">
           <div>
-            <h2 className="font-display text-4xl font-bold leading-tight">
+            <h1 className="font-display text-4xl font-bold leading-tight">
               Unbiased Intelligence for{' '}
               <span className="text-gradient-brand">Africa's Next 50</span>
-            </h2>
+            </h1>
+            <p className="mt-3 text-base text-muted-foreground max-w-md">
+              Sign in to your Omni-Scout Africa account to access Scout Scores, catalysts, and institutional flow data.
+            </p>
           </div>
 
           <ul className="space-y-4">
@@ -133,9 +136,9 @@ const Auth = () => {
             <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 glow-brand">
               <Activity className="h-5 w-5 text-primary" />
             </div>
-            <h1 className="font-display text-xl font-bold">
+            <h2 className="font-display text-xl font-bold">
               <span className="text-gradient-brand">Omni-Scout</span> Africa
-            </h1>
+            </h2>
           </div>
 
           <div className="glass-card rounded-xl p-6 sm:p-8">

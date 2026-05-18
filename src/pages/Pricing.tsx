@@ -119,6 +119,7 @@ const Pricing = () => {
           ))}
         </div>
 
+        <h2 className="sr-only">Subscription Plans</h2>
         <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-3">
           {tiers.map((tier) => (
             <div
