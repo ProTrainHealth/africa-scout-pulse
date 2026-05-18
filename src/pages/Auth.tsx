@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import Seo from '@/components/Seo';
 
 const TRUST_SIGNALS = [
   'Zero trading positions. Radical transparency.',
@@ -83,6 +84,11 @@ const Auth = () => {
 
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2 bg-background">
+      <Seo
+        title="Sign In — Omni-Scout Africa"
+        description="Access your Omni-Scout Africa account: Scout Scores, catalysts, and institutional flow data on Africa's next 50 infrastructure companies."
+        path="/auth"
+      />
       {/* LEFT PANEL */}
       <div className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-card p-12">
         <div
