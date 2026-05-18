@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Globe, Lock, ShieldAlert, Activity, Zap, X, ArrowLeftRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Navbar from '@/components/Navbar';
+import Seo from '@/components/Seo';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
@@ -259,6 +260,11 @@ const WorldMonitor = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="World Monitor — Africa Geopolitical Risk Map | Omni-Scout"
+        description="Interactive intelligence map of Africa: catalysts, sanctions exposure, and composite country risk overlays for subscribers."
+        path="/world-monitor"
+      />
       <Navbar />
       <div className="container mx-auto px-4 pt-24 pb-12">
         {/* Header */}

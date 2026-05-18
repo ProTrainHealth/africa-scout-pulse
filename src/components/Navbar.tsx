@@ -72,8 +72,9 @@ const Navbar = () => {
                   <div className="flex items-center gap-2">
                     <User className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="truncate text-xs text-muted-foreground">{user.email}</span>
-                    <button onClick={() => { signOut(); setOpen(false); }} className="ml-auto text-muted-foreground hover:text-foreground">
+                    <button onClick={() => { signOut(); setOpen(false); }} aria-label="Sign out" className="ml-auto text-muted-foreground hover:text-foreground">
                       <LogOut className="h-3.5 w-3.5" />
+                      <span className="sr-only">Sign out</span>
                     </button>
                   </div>
                 ) : (
@@ -91,8 +92,9 @@ const Navbar = () => {
             {user ? (
               <div className="flex items-center gap-2 rounded-md border border-border/50 bg-secondary/50 px-3 py-1.5">
                 <span className="max-w-[100px] truncate text-xs text-muted-foreground">{user.email}</span>
-                <button onClick={signOut} className="text-muted-foreground hover:text-foreground" title="Sign out">
+                <button onClick={signOut} aria-label="Sign out" className="text-muted-foreground hover:text-foreground" title="Sign out">
                   <LogOut className="h-3.5 w-3.5" />
+                  <span className="sr-only">Sign out</span>
                 </button>
               </div>
             ) : (

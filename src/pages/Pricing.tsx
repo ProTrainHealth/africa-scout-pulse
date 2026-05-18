@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useToast } from '@/hooks/use-toast';
 import FeatureRequestForm from '@/components/FeatureRequestForm';
+import Seo from '@/components/Seo';
 
 type BillingInterval = 'monthly' | 'quarterly' | 'yearly';
 type PaymentProvider = 'paypal';
@@ -95,6 +96,11 @@ const Pricing = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Pricing — Observer, Analyst & Boardroom | Omni-Scout Africa"
+        description="Choose your intel level. Free Observer tier, $139/mo Analyst dashboard, or limited 50-seat Boardroom access to private signal room and analyst calls."
+        path="/pricing"
+      />
       <Navbar />
       <div className="container mx-auto px-4 pb-16 pt-24">
         <div className="mx-auto mb-8 max-w-lg text-center">
@@ -119,6 +125,7 @@ const Pricing = () => {
           ))}
         </div>
 
+        <h2 className="sr-only">Subscription Plans</h2>
         <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-3">
           {tiers.map((tier) => (
             <div

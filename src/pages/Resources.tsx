@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { BookOpen, FileText, TrendingUp, Users, Download, ExternalLink, Loader2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import Seo from '@/components/Seo';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -108,6 +109,11 @@ const Resources = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Resources — Deep Dives & Sector Theses | Omni-Scout Africa"
+        description="Editorial intelligence library: weekly deep-dive reports, sector theses, and narrative analysis on Africa's infrastructure economy."
+        path="/resources"
+      />
       <Navbar />
       <div className="container mx-auto px-4 pb-12 pt-24">
         <div className="mb-8">

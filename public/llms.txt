@@ -1,0 +1,15 @@
+# Omni-Scout Africa
+
+> Radically neutral intelligence on 50 companies critical to Africa's infrastructure by 2050. Scout Scores, catalyst tracking, and institutional flow data. Zero trading positions.
+
+## Pages
+
+- [Home](/): Product overview, live signal pulse, and pricing tiers.
+- [Pricing](/pricing): Observer, Analyst, and Boardroom subscription tiers.
+- [Resources](/resources): Deep-dive reports, sector theses, and editorial intelligence.
+- [World Monitor](/world-monitor): Geopolitical risk map across African markets.
+- [Transparency](/transparency): Scout Score methodology — Governance, Liquidity, Infrastructure, Regulatory, Catalyst weights.
+
+## Optional
+
+- [Sign in](/auth): Account access for subscribers.

@@ -129,6 +129,7 @@ const Watchlist = () => {
                       <button
                         onClick={() => handleRemove(c.id)}
                         disabled={removing === c.id}
+                        aria-label={`Remove ${c.name} from watchlist`}
                         className="rounded p-1.5 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
                       >
                         {removing === c.id ? (
@@ -136,6 +137,7 @@ const Watchlist = () => {
                         ) : (
                           <Trash2 className="h-4 w-4" />
                         )}
+                        <span className="sr-only">Remove {c.name} from watchlist</span>
                       </button>
                     </td>
                   </tr>

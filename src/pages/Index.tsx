@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import LiveStatsBar from '@/components/landing/LiveStatsBar';
 import SignalPulse from '@/components/landing/SignalPulse';
 import BoardroomSeats from '@/components/landing/BoardroomSeats';
+import Seo from '@/components/Seo';
 
 const tiers = [
   {
@@ -55,6 +56,11 @@ const tiers = [
 const Index = () => {
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
+      <Seo
+        title="Omni-Scout Africa — Intelligence for Africa's Next 50"
+        description="Scout Scores, catalyst tracking, and institutional flow data on 50 companies critical to Africa's infrastructure by 2050. Radically neutral. Zero positions."
+        path="/"
+      />
       <Navbar />
 
       {/* Hero */}

@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import Seo from '@/components/Seo';
 
 const ROWS = [
   { letter: 'G', label: 'Governance',            weight: 25, what: 'Board independence, audit quality, ownership concentration, related-party risk.' },
@@ -12,12 +12,13 @@ const ROWS = [
 ];
 
 const Transparency = () => {
-  useEffect(() => {
-    document.title = 'Scout Score Transparency — Omni-Scout Africa';
-  }, []);
-
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Scout Score Methodology — Transparent by Design | Omni-Scout"
+        description="See exactly how every Omni-Scout Africa Scout Score is built: Governance, Liquidity, Infrastructure, Regulatory, and Catalyst weights — fully disclosed."
+        path="/transparency"
+      />
       <Navbar />
       <main className="container mx-auto max-w-4xl px-4 pt-24 pb-16">
         <Link to="/" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
