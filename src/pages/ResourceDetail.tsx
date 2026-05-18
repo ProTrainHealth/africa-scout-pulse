@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import Seo from '@/components/Seo';
 
 type Resource = {
   id: string;
@@ -93,8 +94,24 @@ const ResourceDetail = () => {
     );
   }
 
+  const desc = (resource.summary || resource.title).slice(0, 158);
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title={`${resource.title.slice(0, 55)} | Omni-Scout`}
+        description={desc}
+        path={`/resources/${resource.id}`}
+        ogType="article"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'Article',
+          headline: resource.title,
+          datePublished: resource.published_at,
+          description: desc,
+          author: { '@type': 'Organization', name: 'Omni-Scout Africa' },
+          publisher: { '@type': 'Organization', name: 'Omni-Scout Africa' },
+        }}
+      />
       <Navbar />
       <div className="container mx-auto px-4 pb-12 pt-24">
         <Button variant="ghost" onClick={() => navigate('/resources')} className="mb-6">
