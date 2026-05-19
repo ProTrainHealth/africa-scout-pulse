@@ -116,11 +116,16 @@ const Resources = () => {
       />
       <Navbar />
       <div className="container mx-auto px-4 pb-12 pt-24">
-        <div className="mb-8">
-          <h1 className="font-display text-3xl font-bold">Resources</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Deep dives, sector theses, and narrative intelligence — free for all members.
-          </p>
+        <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="font-display text-3xl font-bold">Resources</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Deep dives, sector theses, and narrative intelligence — free for all members.
+            </p>
+          </div>
+          <div className="w-full sm:w-auto sm:min-w-[320px]">
+            <WeeklyDigestToggle />
+          </div>
         </div>
 
         {grouped.length === 0 && (
