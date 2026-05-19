@@ -1,8 +1,68 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createHmac } from 'node:crypto'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+const jsonError = (status: number, message: string) =>
+  new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+
+// PayPal webhook signature verification via PayPal's verify-webhook-signature API.
+// Requires PAYPAL_WEBHOOK_ID secret to be configured.
+async function verifyPayPalSignature(req: Request, rawBody: string): Promise<boolean> {
+  const webhookId = Deno.env.get('PAYPAL_WEBHOOK_ID')
+  const clientId = Deno.env.get('PAYPAL_CLIENT_ID')
+  const clientSecret = Deno.env.get('PAYPAL_CLIENT_SECRET')
+  if (!webhookId || !clientId || !clientSecret) {
+    console.error('[payment-webhook] PayPal verification secrets missing')
+    return false
+  }
+  const paypalEnv = Deno.env.get('PAYPAL_ENV') || 'sandbox'
+  const baseUrl = paypalEnv === 'sandbox'
+    ? 'https://api-m.sandbox.paypal.com'
+    : 'https://api-m.paypal.com'
+
+  const tokenRes = await fetch(`${baseUrl}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Basic ' + btoa(`${clientId}:${clientSecret}`),
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'grant_type=client_credentials',
+  })
+  const tokenData = await tokenRes.json()
+  if (!tokenData.access_token) return false
+
+  const verifyRes = await fetch(`${baseUrl}/v1/notifications/verify-webhook-signature`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${tokenData.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      auth_algo: req.headers.get('paypal-auth-algo'),
+      cert_url: req.headers.get('paypal-cert-url'),
+      transmission_id: req.headers.get('paypal-transmission-id'),
+      transmission_sig: req.headers.get('paypal-transmission-sig'),
+      transmission_time: req.headers.get('paypal-transmission-time'),
+      webhook_id: webhookId,
+      webhook_event: JSON.parse(rawBody),
+    }),
+  })
+  const verifyData = await verifyRes.json()
+  return verifyData.verification_status === 'SUCCESS'
+}
+
+function verifyPaystackSignature(rawBody: string, signature: string | null): boolean {
+  const secret = Deno.env.get('PAYSTACK_SECRET_KEY')
+  if (!secret || !signature) return false
+  const hash = createHmac('sha512', secret).update(rawBody).digest('hex')
+  return hash === signature
 }
 
 Deno.serve(async (req) => {
@@ -11,16 +71,35 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const rawBody = await req.text()
+    let body: any
+    try { body = JSON.parse(rawBody) } catch { return jsonError(400, 'Invalid payload') }
+
+    const provider = body.provider || (req.headers.get('paypal-transmission-id') ? 'paypal' : 'paystack')
+
+    // Verify signature for the corresponding provider before any DB writes
+    if (provider === 'paypal') {
+      const ok = await verifyPayPalSignature(req, rawBody)
+      if (!ok) {
+        console.warn('[payment-webhook] PayPal signature verification failed')
+        return jsonError(401, 'Invalid signature')
+      }
+    } else if (provider === 'paystack') {
+      const ok = verifyPaystackSignature(rawBody, req.headers.get('x-paystack-signature'))
+      if (!ok) {
+        console.warn('[payment-webhook] Paystack signature verification failed')
+        return jsonError(401, 'Invalid signature')
+      }
+    } else {
+      return jsonError(400, 'Unknown provider')
+    }
+
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    const body = await req.json()
-    const provider = body.provider || 'paystack'
-
     if (provider === 'paystack') {
-      // Paystack webhook events
       const event = body.event
       const data = body.data
 
@@ -54,7 +133,6 @@ Deno.serve(async (req) => {
         }
       }
     } else if (provider === 'paypal') {
-      // PayPal webhook events
       const eventType = body.event_type
       const resource = body.resource
 
@@ -100,7 +178,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (err) {
-    console.error('Webhook error:', err)
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders })
+    console.error('[payment-webhook] error:', err)
+    return jsonError(500, 'An internal error occurred.')
   }
 })
