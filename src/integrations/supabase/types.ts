@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      analyst_questions: {
+        Row: {
+          analyst_response: string
+          body: string
+          created_at: string
+          id: string
+          responded_at: string | null
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          analyst_response?: string
+          body?: string
+          created_at?: string
+          id?: string
+          responded_at?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          analyst_response?: string
+          body?: string
+          created_at?: string
+          id?: string
+          responded_at?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       briefings: {
         Row: {
           analyst_id: string | null
@@ -381,6 +417,7 @@ export type Database = {
           id: string
           timezone: string | null
           user_id: string
+          weekly_digest_opt_in: boolean
         }
         Insert: {
           created_at?: string
@@ -389,6 +426,7 @@ export type Database = {
           id?: string
           timezone?: string | null
           user_id: string
+          weekly_digest_opt_in?: boolean
         }
         Update: {
           created_at?: string
@@ -397,6 +435,7 @@ export type Database = {
           id?: string
           timezone?: string | null
           user_id?: string
+          weekly_digest_opt_in?: boolean
         }
         Relationships: []
       }
