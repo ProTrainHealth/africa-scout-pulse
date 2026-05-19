@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Mic, Lock, Search, PhoneCall, Video, MessageSquare } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Mic, Lock, Search, PhoneCall, Video, MessageSquare, Calendar, Filter } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
+import AnalystQuestionThread from '@/components/AnalystQuestionThread';
 
 type BriefingType = 'voice_note' | 'management_call' | 'video_boardroom';
 
@@ -30,12 +32,23 @@ const SECTIONS: { key: BriefingType; label: string; icon: typeof Mic; descriptio
 
 const Briefings = () => {
   const navigate = useNavigate();
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { isAdmin, loading: authLoading } = useAuth();
   const { plan, isActive, loading: subLoading } = useSubscription();
   const [items, setItems] = useState<Briefing[]>([]);
   const [loading, setLoading] = useState(true);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
-  const [q, setQ] = useState('');
+  const [params, setParams] = useSearchParams();
+
+  const q = params.get('q') ?? '';
+  const typeFilter = (params.get('type') ?? 'all') as 'all' | BriefingType;
+  const from = params.get('from') ?? '';
+  const to = params.get('to') ?? '';
+
+  const setParam = (k: string, v: string) => {
+    const next = new URLSearchParams(params);
+    if (v) next.set(k, v); else next.delete(k);
+    setParams(next, { replace: true });
+  };
 
   const hasAccess = isAdmin || (isActive && plan === 'boardroom');
 
@@ -70,10 +83,15 @@ const Briefings = () => {
   }, [hasAccess]);
 
   const filtered = useMemo(() => {
-    if (!q.trim()) return items;
-    const t = q.toLowerCase();
-    return items.filter((b) => b.title.toLowerCase().includes(t) || b.transcript.toLowerCase().includes(t));
-  }, [items, q]);
+    const t = q.trim().toLowerCase();
+    return items.filter((b) => {
+      if (typeFilter !== 'all' && b.type !== typeFilter) return false;
+      if (from && b.briefing_date < from) return false;
+      if (to && b.briefing_date > to) return false;
+      if (t && !b.title.toLowerCase().includes(t) && !b.transcript.toLowerCase().includes(t)) return false;
+      return true;
+    });
+  }, [items, q, typeFilter, from, to]);
 
   const grouped = useMemo(() => {
     const map: Record<BriefingType, Briefing[]> = { voice_note: [], management_call: [], video_boardroom: [] };
@@ -103,7 +121,7 @@ const Briefings = () => {
           </div>
           <h1 className="font-display text-2xl font-bold">Briefings — Boardroom Only</h1>
           <p className="mt-3 max-w-md text-muted-foreground">
-            Private voice notes, management call summaries, monthly video boardroom, and direct analyst access are reserved for the Boardroom tier.
+            Private voice notes, management call summaries, monthly video boardroom, and direct analyst access are reserved for the Boardroom tier (limited to 50 seats).
           </p>
           <Button onClick={() => navigate('/pricing?return_to=/briefings')} className="mt-6" size="lg">
             Upgrade to Boardroom
@@ -128,42 +146,54 @@ const Briefings = () => {
           </div>
         </div>
 
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder='Search transcripts — "Dangote March"…'
-            className="pl-9"
-          />
+        {/* Filters */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-6">
+          <div className="relative sm:col-span-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={q}
+              onChange={(e) => setParam('q', e.target.value)}
+              placeholder='Search transcripts — "Dangote March"…'
+              className="pl-9"
+            />
+          </div>
+          <Select value={typeFilter} onValueChange={(v) => setParam('type', v === 'all' ? '' : v)}>
+            <SelectTrigger><Filter className="h-3.5 w-3.5 mr-2" /><SelectValue placeholder="All types" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="voice_note">Voice notes</SelectItem>
+              <SelectItem value="management_call">Management calls</SelectItem>
+              <SelectItem value="video_boardroom">Video boardroom</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex gap-1 items-center">
+            <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <Input type="date" value={from} onChange={(e) => setParam('from', e.target.value)} className="px-2 text-xs" aria-label="From date" />
+            <Input type="date" value={to} onChange={(e) => setParam('to', e.target.value)} className="px-2 text-xs" aria-label="To date" />
+          </div>
         </div>
 
         {/* Direct Analyst Access */}
-        <div className="glass-card rounded-xl p-5 mb-8 flex flex-wrap items-center justify-between gap-4 border-primary/30">
-          <div className="flex items-start gap-3">
+        <div className="glass-card rounded-xl p-5 mb-8 border-primary/30">
+          <div className="flex items-start gap-3 mb-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
               <MessageSquare className="h-5 w-5 text-primary" />
             </div>
             <div>
               <h2 className="font-display font-bold">Direct analyst access</h2>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Send a private question. We reply within one business day.
+                Submit a private question. We reply within one business day.
               </p>
             </div>
           </div>
-          <a
-            href={`mailto:analyst@omni-scout.africa?subject=${encodeURIComponent('Boardroom question')}&body=${encodeURIComponent(`From: ${user?.email ?? ''}\n\n`)}`}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
-          >
-            Message analyst
-          </a>
+          <AnalystQuestionThread />
         </div>
 
         {loading ? (
           <div className="space-y-3">{[0,1,2].map((i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}</div>
         ) : filtered.length === 0 ? (
           <div className="text-center text-sm text-muted-foreground py-12">
-            {q ? 'No briefings match your search.' : 'No briefings published yet.'}
+            {(q || typeFilter !== 'all' || from || to) ? 'No briefings match your filters.' : 'No briefings published yet.'}
           </div>
         ) : (
           <div className="space-y-10">
@@ -186,7 +216,7 @@ const Briefings = () => {
                           <h3 className="font-display font-bold text-base">{b.title}</h3>
                           <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap">{b.briefing_date}</span>
                         </div>
-                        {b.type === 'video_boardroom' && b.video_url && (
+                        {b.type === 'video_boardroom' && b.video_url && hasAccess && (
                           <a
                             href={b.video_url}
                             target="_blank"
@@ -195,6 +225,11 @@ const Briefings = () => {
                           >
                             <Video className="h-3.5 w-3.5" /> Watch recording
                           </a>
+                        )}
+                        {b.type === 'video_boardroom' && b.video_url && !hasAccess && (
+                          <div className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Lock className="h-3 w-3" /> Boardroom only
+                          </div>
                         )}
                         {b.type !== 'video_boardroom' && signedUrls[b.id] && (
                           <audio controls preload="none" className="mt-3 w-full" src={signedUrls[b.id]} />
