@@ -6,6 +6,7 @@ import Seo from '@/components/Seo';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
+import WeeklyDigestToggle from '@/components/WeeklyDigestToggle';
 
 type Resource = {
   id: string;
