@@ -5,6 +5,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
+const jsonError = (status: number, message: string) =>
+  new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -13,7 +19,7 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders })
+      return jsonError(401, 'Unauthorized')
     }
 
     const supabase = createClient(
@@ -24,7 +30,7 @@ Deno.serve(async (req) => {
 
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders })
+      return jsonError(401, 'Unauthorized')
     }
 
     const userId = user.id
@@ -32,7 +38,7 @@ Deno.serve(async (req) => {
     const { plan, interval } = await req.json()
 
     if (!['analyst', 'boardroom'].includes(plan)) {
-      return new Response(JSON.stringify({ error: 'Invalid plan' }), { status: 400, headers: corsHeaders })
+      return jsonError(400, 'Invalid plan')
     }
 
     const validInterval = ['monthly', 'quarterly', 'yearly'].includes(interval) ? interval : 'monthly'
@@ -51,12 +57,21 @@ Deno.serve(async (req) => {
 
     const clientId = Deno.env.get('PAYPAL_CLIENT_ID')
     const clientSecret = Deno.env.get('PAYPAL_CLIENT_SECRET')
+    const paypalEnv = Deno.env.get('PAYPAL_ENV') || 'sandbox'
+    // Hardcoded app origin from server-side secret — never trust client headers
+    // for building OAuth/payment return URLs.
+    const appOrigin = (Deno.env.get('APP_ORIGIN') || '').replace(/\/$/, '')
 
     if (!clientId || !clientSecret) {
-      return new Response(JSON.stringify({ error: 'Payment provider not configured' }), { status: 500, headers: corsHeaders })
+      return jsonError(500, 'Payment provider not configured')
+    }
+    if (!appOrigin) {
+      return jsonError(500, 'Application origin not configured')
     }
 
-    const baseUrl = 'https://api-m.sandbox.paypal.com'
+    const baseUrl = paypalEnv === 'sandbox'
+      ? 'https://api-m.sandbox.paypal.com'
+      : 'https://api-m.paypal.com'
 
     const tokenRes = await fetch(`${baseUrl}/v1/oauth2/token`, {
       method: 'POST',
@@ -69,10 +84,9 @@ Deno.serve(async (req) => {
     const tokenData = await tokenRes.json()
 
     if (!tokenData.access_token) {
-      return new Response(JSON.stringify({ error: 'Failed to authenticate with payment provider' }), { status: 500, headers: corsHeaders })
+      console.error('[create-checkout] PayPal token error:', tokenData)
+      return jsonError(500, 'Failed to authenticate with payment provider')
     }
-
-    const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/$/, '') || ''
 
     const orderRes = await fetch(`${baseUrl}/v2/checkout/orders`, {
       method: 'POST',
@@ -88,8 +102,8 @@ Deno.serve(async (req) => {
           custom_id: JSON.stringify({ user_id: userId, plan, interval: validInterval }),
         }],
         application_context: {
-          return_url: `${origin}/dashboard?payment=success`,
-          cancel_url: `${origin}/pricing?payment=canceled`,
+          return_url: `${appOrigin}/dashboard?payment=success`,
+          cancel_url: `${appOrigin}/pricing?payment=canceled`,
         },
       }),
     })
@@ -98,7 +112,8 @@ Deno.serve(async (req) => {
     const approveLink = orderData.links?.find((l: any) => l.rel === 'approve')
 
     if (!approveLink?.href) {
-      return new Response(JSON.stringify({ error: 'Failed to create payment order' }), { status: 500, headers: corsHeaders })
+      console.error('[create-checkout] PayPal order error:', orderData)
+      return jsonError(500, 'Failed to create payment order')
     }
 
     return new Response(JSON.stringify({ url: approveLink.href, provider: 'paypal' }), {
@@ -106,6 +121,7 @@ Deno.serve(async (req) => {
     })
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders })
+    console.error('[create-checkout] unexpected error:', err)
+    return jsonError(500, 'An internal error occurred. Please try again.')
   }
 })
