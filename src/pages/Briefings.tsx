@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mic, Lock, Search } from 'lucide-react';
+import { Mic, Lock, Search, PhoneCall, Video, MessageSquare } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 
+type BriefingType = 'voice_note' | 'management_call' | 'video_boardroom';
+
 interface Briefing {
   id: string;
   title: string;
@@ -16,11 +18,19 @@ interface Briefing {
   transcript: string;
   briefing_date: string;
   duration_seconds: number;
+  type: BriefingType;
+  video_url: string;
 }
+
+const SECTIONS: { key: BriefingType; label: string; icon: typeof Mic; description: string }[] = [
+  { key: 'voice_note', label: 'Private voice notes', icon: Mic, description: 'Analyst audio briefings with full searchable transcripts.' },
+  { key: 'management_call', label: 'Management call summaries', icon: PhoneCall, description: 'Notes and recordings from management Q&A sessions.' },
+  { key: 'video_boardroom', label: 'Monthly video boardroom', icon: Video, description: 'Monthly long-form video sessions, Boardroom-only.' },
+];
 
 const Briefings = () => {
   const navigate = useNavigate();
-  const { isAdmin, loading: authLoading } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const { plan, isActive, loading: subLoading } = useSubscription();
   const [items, setItems] = useState<Briefing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,10 +52,9 @@ const Briefings = () => {
       if (cancelled) return;
       if (!error && data) {
         setItems(data as Briefing[]);
-        // Sign URLs for the most recent 10
         const urls: Record<string, string> = {};
         await Promise.all(
-          (data as Briefing[]).slice(0, 10).map(async (b) => {
+          (data as Briefing[]).slice(0, 12).map(async (b) => {
             if (!b.storage_path) return;
             const { data: s } = await supabase.storage
               .from('briefings')
@@ -66,6 +75,15 @@ const Briefings = () => {
     return items.filter((b) => b.title.toLowerCase().includes(t) || b.transcript.toLowerCase().includes(t));
   }, [items, q]);
 
+  const grouped = useMemo(() => {
+    const map: Record<BriefingType, Briefing[]> = { voice_note: [], management_call: [], video_boardroom: [] };
+    for (const b of filtered) {
+      const t = (b.type ?? 'voice_note') as BriefingType;
+      if (map[t]) map[t].push(b);
+    }
+    return map;
+  }, [filtered]);
+
   if (authLoading || subLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -85,7 +103,7 @@ const Briefings = () => {
           </div>
           <h1 className="font-display text-2xl font-bold">Briefings — Boardroom Only</h1>
           <p className="mt-3 max-w-md text-muted-foreground">
-            Audio briefings with searchable transcripts are reserved for the Boardroom tier.
+            Private voice notes, management call summaries, monthly video boardroom, and direct analyst access are reserved for the Boardroom tier.
           </p>
           <Button onClick={() => navigate('/pricing?return_to=/briefings')} className="mt-6" size="lg">
             Upgrade to Boardroom
@@ -102,10 +120,10 @@ const Briefings = () => {
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-border/40 pb-4">
           <div>
             <h1 className="font-display text-2xl font-bold flex items-center gap-2">
-              <Mic className="h-5 w-5 text-primary" /> Briefings Archive
+              <Mic className="h-5 w-5 text-primary" /> Boardroom Archive
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Analyst audio briefings with full searchable transcripts.
+              Voice notes, management calls, and the monthly video boardroom.
             </p>
           </div>
         </div>
@@ -120,6 +138,27 @@ const Briefings = () => {
           />
         </div>
 
+        {/* Direct Analyst Access */}
+        <div className="glass-card rounded-xl p-5 mb-8 flex flex-wrap items-center justify-between gap-4 border-primary/30">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <MessageSquare className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="font-display font-bold">Direct analyst access</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Send a private question. We reply within one business day.
+              </p>
+            </div>
+          </div>
+          <a
+            href={`mailto:analyst@omni-scout.africa?subject=${encodeURIComponent('Boardroom question')}&body=${encodeURIComponent(`From: ${user?.email ?? ''}\n\n`)}`}
+            className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            Message analyst
+          </a>
+        </div>
+
         {loading ? (
           <div className="space-y-3">{[0,1,2].map((i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}</div>
         ) : filtered.length === 0 ? (
@@ -127,29 +166,56 @@ const Briefings = () => {
             {q ? 'No briefings match your search.' : 'No briefings published yet.'}
           </div>
         ) : (
-          <ul className="space-y-4">
-            {filtered.map((b) => (
-              <li key={b.id} className="glass-card rounded-xl p-5">
-                <div className="flex items-baseline justify-between gap-3">
-                  <h2 className="font-display font-bold text-base">{b.title}</h2>
-                  <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap">{b.briefing_date}</span>
-                </div>
-                {signedUrls[b.id] && (
-                  <audio controls preload="none" className="mt-3 w-full" src={signedUrls[b.id]} />
-                )}
-                {b.transcript && (
-                  <details className="mt-3 group">
-                    <summary className="cursor-pointer text-[11px] font-mono uppercase tracking-wider text-primary hover:underline">
-                      Transcript
-                    </summary>
-                    <p className="mt-2 text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                      {b.transcript}
-                    </p>
-                  </details>
-                )}
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-10">
+            {SECTIONS.map(({ key, label, icon: Icon, description }) => {
+              const list = grouped[key];
+              if (!list.length) return null;
+              return (
+                <section key={key}>
+                  <div className="mb-3 flex items-baseline justify-between gap-2 border-b border-border/30 pb-2">
+                    <h2 className="font-display font-bold text-sm flex items-center gap-2">
+                      <Icon className="h-4 w-4 text-primary" /> {label}
+                    </h2>
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{list.length}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">{description}</p>
+                  <ul className="space-y-4">
+                    {list.map((b) => (
+                      <li key={b.id} className="glass-card rounded-xl p-5">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <h3 className="font-display font-bold text-base">{b.title}</h3>
+                          <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap">{b.briefing_date}</span>
+                        </div>
+                        {b.type === 'video_boardroom' && b.video_url && (
+                          <a
+                            href={b.video_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-3 inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                          >
+                            <Video className="h-3.5 w-3.5" /> Watch recording
+                          </a>
+                        )}
+                        {b.type !== 'video_boardroom' && signedUrls[b.id] && (
+                          <audio controls preload="none" className="mt-3 w-full" src={signedUrls[b.id]} />
+                        )}
+                        {b.transcript && (
+                          <details className="mt-3 group">
+                            <summary className="cursor-pointer text-[11px] font-mono uppercase tracking-wider text-primary hover:underline">
+                              {b.type === 'management_call' ? 'Call summary' : 'Transcript'}
+                            </summary>
+                            <p className="mt-2 text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                              {b.transcript}
+                            </p>
+                          </details>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              );
+            })}
+          </div>
         )}
 
         <p className="mt-10 text-[10px] font-mono uppercase tracking-wider text-muted-foreground text-center">
