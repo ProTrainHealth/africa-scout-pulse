@@ -25,7 +25,9 @@ export type Database = {
           storage_path: string
           title: string
           transcript: string
+          type: string
           updated_at: string
+          video_url: string
         }
         Insert: {
           analyst_id?: string | null
@@ -37,7 +39,9 @@ export type Database = {
           storage_path?: string
           title?: string
           transcript?: string
+          type?: string
           updated_at?: string
+          video_url?: string
         }
         Update: {
           analyst_id?: string | null
@@ -49,7 +53,9 @@ export type Database = {
           storage_path?: string
           title?: string
           transcript?: string
+          type?: string
           updated_at?: string
+          video_url?: string
         }
         Relationships: [
           {
