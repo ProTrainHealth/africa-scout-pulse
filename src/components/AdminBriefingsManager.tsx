@@ -7,6 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Mic, Trash2, Upload } from 'lucide-react';
 
+type BriefingType = 'voice_note' | 'management_call' | 'video_boardroom';
+
 interface Briefing {
   id: string;
   title: string;
@@ -15,7 +17,15 @@ interface Briefing {
   briefing_date: string;
   duration_seconds: number;
   company_id: string | null;
+  type: BriefingType;
+  video_url: string;
 }
+
+const TYPE_LABEL: Record<BriefingType, string> = {
+  voice_note: 'Private voice note',
+  management_call: 'Management call summary',
+  video_boardroom: 'Monthly video boardroom',
+};
 
 const AdminBriefingsManager = () => {
   const { toast } = useToast();
@@ -24,6 +34,8 @@ const AdminBriefingsManager = () => {
   const [busy, setBusy] = useState(false);
   const [title, setTitle] = useState('');
   const [transcript, setTranscript] = useState('');
+  const [type, setType] = useState<BriefingType>('voice_note');
+  const [videoUrl, setVideoUrl] = useState('');
   const [file, setFile] = useState<File | null>(null);
 
   const fetchAll = async () => {
@@ -39,28 +51,41 @@ const AdminBriefingsManager = () => {
   useEffect(() => { fetchAll(); }, []);
 
   const handleUpload = async () => {
-    if (!file || !title.trim()) {
-      toast({ title: 'Title and audio file required', variant: 'destructive' });
+    if (!title.trim()) {
+      toast({ title: 'Title required', variant: 'destructive' });
+      return;
+    }
+    if (type === 'video_boardroom' && !videoUrl.trim()) {
+      toast({ title: 'Video URL required for boardroom recordings', variant: 'destructive' });
+      return;
+    }
+    if (type !== 'video_boardroom' && !file) {
+      toast({ title: 'Audio file required', variant: 'destructive' });
       return;
     }
     setBusy(true);
-    const path = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-]/g, '_')}`;
-    const { error: upErr } = await supabase.storage.from('briefings').upload(path, file);
-    if (upErr) {
-      toast({ title: 'Upload failed', description: upErr.message, variant: 'destructive' });
-      setBusy(false);
-      return;
+    let path = '';
+    if (file) {
+      path = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-]/g, '_')}`;
+      const { error: upErr } = await supabase.storage.from('briefings').upload(path, file);
+      if (upErr) {
+        toast({ title: 'Upload failed', description: upErr.message, variant: 'destructive' });
+        setBusy(false);
+        return;
+      }
     }
     const { error: insErr } = await supabase.from('briefings').insert({
       title: title.trim(),
       storage_path: path,
       transcript: transcript.trim(),
+      type,
+      video_url: videoUrl.trim(),
     });
     if (insErr) {
       toast({ title: 'Save failed', description: insErr.message, variant: 'destructive' });
     } else {
       toast({ title: 'Briefing published' });
-      setTitle(''); setTranscript(''); setFile(null);
+      setTitle(''); setTranscript(''); setFile(null); setVideoUrl(''); setType('voice_note');
       fetchAll();
     }
     setBusy(false);
@@ -81,17 +106,36 @@ const AdminBriefingsManager = () => {
           <Mic className="h-4 w-4 text-primary" /> New briefing (Boardroom-only)
         </div>
         <div className="grid gap-2">
+          <Label className="text-xs">Type</Label>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value as BriefingType)}
+            className="rounded-md border border-border bg-secondary/40 px-3 py-2 text-sm"
+          >
+            {(Object.keys(TYPE_LABEL) as BriefingType[]).map((k) => (
+              <option key={k} value={k}>{TYPE_LABEL[k]}</option>
+            ))}
+          </select>
+        </div>
+        <div className="grid gap-2">
           <Label className="text-xs">Title</Label>
           <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Dangote March 2026 — Cement margin call" />
         </div>
         <div className="grid gap-2">
-          <Label className="text-xs">Transcript (optional, paste here for now)</Label>
-          <Textarea rows={4} value={transcript} onChange={(e) => setTranscript(e.target.value)} placeholder="Searchable transcript..." />
+          <Label className="text-xs">Transcript / Summary (optional)</Label>
+          <Textarea rows={4} value={transcript} onChange={(e) => setTranscript(e.target.value)} placeholder="Searchable transcript or call notes..." />
         </div>
-        <div className="grid gap-2">
-          <Label className="text-xs">Audio file (MP3 / M4A / WAV)</Label>
-          <Input type="file" accept="audio/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-        </div>
+        {type === 'video_boardroom' ? (
+          <div className="grid gap-2">
+            <Label className="text-xs">Video URL (Vimeo / YouTube unlisted)</Label>
+            <Input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://vimeo.com/..." />
+          </div>
+        ) : (
+          <div className="grid gap-2">
+            <Label className="text-xs">Audio file (MP3 / M4A / WAV)</Label>
+            <Input type="file" accept="audio/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+          </div>
+        )}
         <Button onClick={handleUpload} disabled={busy}>
           <Upload className="mr-1 h-4 w-4" /> {busy ? 'Uploading…' : 'Publish briefing'}
         </Button>
@@ -111,9 +155,11 @@ const AdminBriefingsManager = () => {
               <li key={b.id} className="px-4 py-3 flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="font-semibold text-sm truncate">{b.title}</div>
-                  <div className="text-[11px] font-mono text-muted-foreground">{b.briefing_date}</div>
+                  <div className="text-[11px] font-mono text-muted-foreground">
+                    {b.briefing_date} · {TYPE_LABEL[b.type] ?? b.type}
+                  </div>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => handleDelete(b)}>
+                <Button variant="ghost" size="icon" onClick={() => handleDelete(b)} aria-label="Delete briefing">
                   <Trash2 className="h-3.5 w-3.5 text-destructive" />
                 </Button>
               </li>
