@@ -6,9 +6,6 @@ verify_jwt = false
 [functions.payment-webhook]
 verify_jwt = false
 
-[functions.paypal-client-token]
-verify_jwt = false
-
 [functions.resource-signed-url]
 verify_jwt = false
 
