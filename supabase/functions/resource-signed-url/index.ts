@@ -43,7 +43,8 @@ Deno.serve(async (req) => {
       .createSignedUrl(storage_path, 3600) // 1 hour TTL
 
     if (error) {
-      return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: corsHeaders })
+      console.error('[resource-signed-url] storage error:', error.message)
+      return new Response(JSON.stringify({ error: 'An internal error occurred.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     return new Response(JSON.stringify({ url: data.signedUrl }), {
