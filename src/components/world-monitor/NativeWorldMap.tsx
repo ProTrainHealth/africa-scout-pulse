@@ -1,11 +1,6 @@
-import { useEffect, useState, useMemo } from "react";
-import {
-  ComposableMap,
-  Geographies,
-  Geography,
-  Marker,
-  ZoomableGroup,
-} from "react-simple-maps";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { geoMercator, geoPath } from "d3-geo";
+import { feature } from "topojson-client";
 import { Building2, ShieldAlert, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -46,13 +41,11 @@ interface TrackedMarker {
 interface SanctionsMarker {
   name: string;
   coordinates: [number, number];
-  type: "sanctions";
 }
 
 interface CatalystMarker {
   name: string;
   coordinates: [number, number];
-  type: "catalyst";
   company_id?: string;
 }
 
@@ -61,6 +54,8 @@ const SIGNAL_COLOR: Record<Signal, string> = {
   HOLD: "hsl(38 100% 50%)",
   MONITOR: "hsl(0 72% 51%)",
 };
+
+const VIEW_W = 800;
 
 interface NativeWorldMapProps {
   height?: number;
@@ -85,11 +80,7 @@ const NativeWorldMap = ({
   onCountryClick,
   selectedCountryCode = null,
 }: NativeWorldMapProps) => {
-  const [layers, setLayers] = useState({
-    companies: true,
-    sanctions: true,
-    catalysts: true,
-  });
+  const [layers, setLayers] = useState({ companies: true, sanctions: true, catalysts: true });
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [hoveredMarker, setHoveredMarker] = useState<HoveredMarker | null>(null);
 
@@ -99,86 +90,77 @@ const NativeWorldMap = ({
   const [heatByCode, setHeatByCode] = useState<Record<string, number>>({});
   const [mapDataLoading, setMapDataLoading] = useState(true);
 
+  const [geoFeatures, setGeoFeatures] = useState<any[]>([]);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const dragRef = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const africaSet = useMemo(() => new Set(AFRICA_ISO_CODES), []);
+
+  const projection = useMemo(
+    () => geoMercator().center([20, 0]).scale(200).translate([VIEW_W / 2, height / 2]),
+    [height],
+  );
+  const pathGen = useMemo(() => geoPath(projection), [projection]);
+
+  const project = (lon: number, lat: number): [number, number] | null => {
+    const p = projection([lon, lat]);
+    return p ? [p[0], p[1]] : null;
+  };
+
+  // Load topojson
+  useEffect(() => {
+    let cancelled = false;
+    fetch(GEO_URL)
+      .then((r) => r.json())
+      .then((topo) => {
+        if (cancelled) return;
+        const fc = feature(topo, topo.objects.countries) as any;
+        setGeoFeatures(fc.features ?? []);
+      })
+      .catch((e) => console.error("geo load:", e));
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-
     const fetchAll = async () => {
       const [companiesRes, contextRes, catalystsRes, heatRes] = await Promise.all([
-        supabase
-          .from("companies")
-          .select("name, country_code, scout_score, latitude, longitude")
-          .not("latitude", "is", null)
-          .not("longitude", "is", null),
-        supabase
-          .from("country_context")
-          .select("country, country_code, risk_tag, latitude, longitude")
-          .or(
-            "risk_tag.ilike.%sanction%,risk_tag.ilike.%alert%,risk_tag.ilike.%restricted%,risk_tag.ilike.%elevated%",
-          ),
-        supabase
-          .from("catalysts")
-          .select(
-            "id, title, type, company_id, companies:company_id ( name, latitude, longitude )",
-          )
-          .limit(20),
-        supabase
-          .from("country_context")
-          .select("country, country_code, heat_intensity"),
+        supabase.from("companies").select("name, country_code, scout_score, latitude, longitude")
+          .not("latitude", "is", null).not("longitude", "is", null),
+        supabase.from("country_context").select("country, country_code, risk_tag, latitude, longitude")
+          .or("risk_tag.ilike.%sanction%,risk_tag.ilike.%alert%,risk_tag.ilike.%restricted%,risk_tag.ilike.%elevated%"),
+        supabase.from("catalysts").select("id, title, type, company_id, companies:company_id ( name, latitude, longitude )").limit(20),
+        supabase.from("country_context").select("country, country_code, heat_intensity"),
       ]);
-
       if (cancelled) return;
 
       if (!companiesRes.error && companiesRes.data) {
-        const mapped: TrackedMarker[] = companiesRes.data
+        setTrackedMarkers(companiesRes.data
           .filter((c: any) => c.latitude != null && c.longitude != null)
           .map((c: any) => {
             const score = c.scout_score ?? 0;
-            const signal: Signal =
-              score >= 70 ? "ACCUMULATE" : score >= 55 ? "HOLD" : "MONITOR";
-            return {
-              name: c.name,
-              country: c.country_code ?? "",
-              coordinates: [Number(c.longitude), Number(c.latitude)],
-              score,
-              signal,
-            };
-          });
-        setTrackedMarkers(mapped);
-      } else if (companiesRes.error) {
-        console.error("companies fetch:", companiesRes.error);
-      }
+            const signal: Signal = score >= 70 ? "ACCUMULATE" : score >= 55 ? "HOLD" : "MONITOR";
+            return { name: c.name, country: c.country_code ?? "", coordinates: [Number(c.longitude), Number(c.latitude)], score, signal };
+          }));
+      } else if (companiesRes.error) console.error("companies:", companiesRes.error);
 
       if (!contextRes.error && contextRes.data) {
-        const mapped: SanctionsMarker[] = contextRes.data
+        setSanctionsMarkers(contextRes.data
           .filter((c: any) => c.latitude != null && c.longitude != null)
-          .map((c: any) => ({
-            name: `${c.country} — ${c.risk_tag}`,
-            coordinates: [Number(c.longitude), Number(c.latitude)],
-            type: "sanctions" as const,
-          }));
-        setSanctionsMarkers(mapped);
-      } else if (contextRes.error) {
-        console.error("country_context fetch:", contextRes.error);
-      }
+          .map((c: any) => ({ name: `${c.country} — ${c.risk_tag}`, coordinates: [Number(c.longitude), Number(c.latitude)] })));
+      } else if (contextRes.error) console.error("country_context:", contextRes.error);
 
       if (!catalystsRes.error && catalystsRes.data) {
-        const mapped: CatalystMarker[] = (catalystsRes.data as any[])
+        setCatalystMarkers((catalystsRes.data as any[])
           .filter((c) => c.companies?.latitude != null && c.companies?.longitude != null)
           .map((c) => ({
             name: `${c.companies.name} — ${c.title ?? c.type ?? "Catalyst"}`,
-            coordinates: [
-              Number(c.companies.longitude),
-              Number(c.companies.latitude),
-            ],
-            type: "catalyst" as const,
+            coordinates: [Number(c.companies.longitude), Number(c.companies.latitude)],
             company_id: c.id,
-          }));
-        setCatalystMarkers(mapped);
-      } else if (catalystsRes.error) {
-        console.error("catalysts fetch:", catalystsRes.error);
-      }
+          })));
+      } else if (catalystsRes.error) console.error("catalysts:", catalystsRes.error);
 
       if (!heatRes.error && heatRes.data) {
         const lookup: Record<string, number> = {};
@@ -188,35 +170,45 @@ const NativeWorldMap = ({
           if (row.country) lookup[String(row.country).toUpperCase()] = v;
         }
         setHeatByCode(lookup);
-      } else if (heatRes.error) {
-        console.error("heat_intensity fetch:", heatRes.error);
-      }
+      } else if (heatRes.error) console.error("heat:", heatRes.error);
 
       setMapDataLoading(false);
     };
-
     fetchAll();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   const toggleLayer = (key: keyof typeof layers) =>
     setLayers((s) => ({ ...s, [key]: !s[key] }));
 
-  const handleMarkerEnter = (
-    e: React.MouseEvent<SVGGElement>,
-    m: TrackedMarker,
-  ) => {
-    const rect = (e.currentTarget.ownerSVGElement?.parentElement as HTMLElement)?.getBoundingClientRect();
+  const handleMarkerEnter = (e: React.MouseEvent, m: TrackedMarker) => {
+    const rect = containerRef.current?.getBoundingClientRect();
     setHoveredMarker({
-      name: m.name,
-      score: m.score,
-      signal: m.signal,
+      name: m.name, score: m.score, signal: m.signal,
       x: e.clientX - (rect?.left ?? 0) + 12,
       y: e.clientY - (rect?.top ?? 0) + 12,
     });
   };
+
+  // Pan/zoom handlers
+  const onWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    setZoom((z) => Math.min(6, Math.max(0.8, z * factor)));
+  };
+  const onMouseDown = (e: React.MouseEvent) => {
+    dragRef.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
+  };
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!dragRef.current) return;
+    setPan({
+      x: dragRef.current.px + (e.clientX - dragRef.current.x),
+      y: dragRef.current.py + (e.clientY - dragRef.current.y),
+    });
+  };
+  const onMouseUp = () => { dragRef.current = null; };
+
+  const transform = `translate(${pan.x + VIEW_W / 2} ${pan.y + height / 2}) scale(${zoom}) translate(${-VIEW_W / 2} ${-height / 2})`;
 
   return (
     <div className={`relative ${className}`}>
@@ -247,156 +239,116 @@ const NativeWorldMap = ({
       )}
 
       <div
+        ref={containerRef}
         className="relative w-full overflow-hidden rounded-xl border border-border/40 bg-card"
         style={{ height }}
       >
-        <ComposableMap
-          projection="geoMercator"
-          projectionConfig={{ center: [20, 0], scale: 200 }}
-          width={800}
-          height={height}
-          style={{ width: "100%", height: "100%" }}
+        <svg
+          viewBox={`0 0 ${VIEW_W} ${height}`}
+          width="100%"
+          height="100%"
+          style={{ cursor: dragRef.current ? "grabbing" : "grab" }}
+          onWheel={onWheel}
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseUp}
         >
-          <ZoomableGroup center={[20, 0]} zoom={1} minZoom={0.8} maxZoom={6}>
-            <Geographies geography={GEO_URL}>
-              {({ geographies }) =>
-                geographies.map((geo) => {
-                  const numericId = String(geo.id).padStart(3, "0");
-                  const iso3 = NUMERIC_TO_ISO3[numericId];
-                  const isAfrica = iso3 ? africaSet.has(iso3) : false;
-                  const isSelected = iso3 && iso3 === selectedCountry;
-                  const geoName: string = (geo.properties as any)?.name ?? "";
-                  const heat = isAfrica
-                    ? (heatByCode[iso3 ?? ""] ?? heatByCode[geoName.toUpperCase()] ?? 0)
-                    : 0;
-                  // Color ramp: 0 = neutral dark, 100 = hot red. Amber midpoint.
-                  const heatFill =
-                    heat >= 70 ? `hsl(0 72% 51% / ${0.25 + (heat - 70) * 0.012})`
-                    : heat >= 40 ? `hsl(38 100% 50% / ${0.15 + (heat - 40) * 0.008})`
-                    : heat > 0   ? `hsl(155 55% 42% / ${0.1 + heat * 0.004})`
-                    : null;
+          <g transform={transform}>
+            {geoFeatures.map((geo, idx) => {
+              const numericId = String(geo.id).padStart(3, "0");
+              const iso3 = NUMERIC_TO_ISO3[numericId];
+              const isAfrica = iso3 ? africaSet.has(iso3) : false;
+              const isSelected = iso3 && iso3 === selectedCountry;
+              const geoName: string = geo.properties?.name ?? "";
+              const heat = isAfrica
+                ? (heatByCode[iso3 ?? ""] ?? heatByCode[geoName.toUpperCase()] ?? 0)
+                : 0;
+              const heatFill =
+                heat >= 70 ? `hsl(0 72% 51% / ${0.25 + (heat - 70) * 0.012})`
+                : heat >= 40 ? `hsl(38 100% 50% / ${0.15 + (heat - 40) * 0.008})`
+                : heat > 0   ? `hsl(155 55% 42% / ${0.1 + heat * 0.004})`
+                : null;
+              const baseFill = isSelected
+                ? "hsl(38 100% 50% / 0.2)"
+                : heatFill ?? (isAfrica ? "hsl(220 15% 14%)" : "hsl(220 15% 8%)");
+              const d = pathGen(geo) ?? "";
+              return (
+                <path
+                  key={idx}
+                  d={d}
+                  fill={baseFill}
+                  stroke={isAfrica ? "hsl(38 100% 50% / 0.3)" : "hsl(220 12% 16%)"}
+                  strokeWidth={isAfrica ? 0.5 / zoom : 0.3 / zoom}
+                  style={{ cursor: isAfrica ? "pointer" : "default", outline: "none" }}
+                  onClick={() => {
+                    if (isAfrica && iso3) {
+                      setSelectedCountry(iso3);
+                      onCountryClick?.(iso3);
+                    }
+                  }}
+                  onMouseEnter={(e) => {
+                    if (isAfrica) (e.currentTarget as SVGPathElement).setAttribute("fill", "hsl(38 100% 50% / 0.15)");
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as SVGPathElement).setAttribute("fill", baseFill);
+                  }}
+                />
+              );
+            })}
 
-                  const baseFill = isSelected
-                    ? "hsl(38 100% 50% / 0.2)"
-                    : heatFill
-                      ? heatFill
-                      : isAfrica
-                        ? "hsl(220 15% 14%)"
-                        : "hsl(220 15% 8%)";
+            {layers.companies && trackedMarkers.map((m) => {
+              const p = project(m.coordinates[0], m.coordinates[1]);
+              if (!p) return null;
+              const color = SIGNAL_COLOR[m.signal];
+              const dim = selectedCountryCode != null &&
+                m.country.toUpperCase() !== selectedCountryCode.toUpperCase();
+              return (
+                <g
+                  key={m.name}
+                  transform={`translate(${p[0]} ${p[1]})`}
+                  opacity={dim ? 0.25 : 1}
+                  style={{ cursor: "pointer" }}
+                  onMouseEnter={(e) => handleMarkerEnter(e, m)}
+                  onMouseLeave={() => setHoveredMarker(null)}
+                >
+                  <circle r={8 / zoom} fill={color} opacity={0.3} className="animate-pulse-slow" />
+                  <circle r={5 / zoom} fill={color} stroke="hsl(220 15% 6%)" strokeWidth={1 / zoom} />
+                  <title>{`${m.name} — Score ${m.score}`}</title>
+                </g>
+              );
+            })}
 
-                  return (
-                    <Geography
-                      key={geo.rsmKey}
-                      geography={geo}
-                      onClick={() => {
-                        if (isAfrica && iso3) {
-                          setSelectedCountry(iso3);
-                          onCountryClick?.(iso3);
-                        }
-                      }}
-                      style={{
-                        default: {
-                          fill: baseFill,
-                          stroke: isAfrica
-                            ? "hsl(38 100% 50% / 0.3)"
-                            : "hsl(220 12% 16%)",
-                          strokeWidth: isAfrica ? 0.5 : 0.3,
-                          outline: "none",
-                          cursor: isAfrica ? "pointer" : "default",
-                        },
-                        hover: {
-                          fill: isAfrica
-                            ? "hsl(38 100% 50% / 0.15)"
-                            : baseFill,
-                          stroke: isAfrica
-                            ? "hsl(38 100% 50% / 0.5)"
-                            : "hsl(220 12% 16%)",
-                          strokeWidth: isAfrica ? 0.7 : 0.3,
-                          outline: "none",
-                        },
-                        pressed: {
-                          fill: isAfrica
-                            ? "hsl(38 100% 50% / 0.25)"
-                            : baseFill,
-                          outline: "none",
-                        },
-                      }}
-                    />
-                  );
-                })
-              }
-            </Geographies>
-
-            {layers.companies &&
-              trackedMarkers.map((m) => {
-                const color = SIGNAL_COLOR[m.signal];
-                const dim =
-                  selectedCountryCode != null &&
-                  m.country.toUpperCase() !== selectedCountryCode.toUpperCase();
-                return (
-                  <Marker
-                    key={m.name}
-                    coordinates={m.coordinates}
-                    onMouseEnter={(e) => handleMarkerEnter(e as any, m)}
-                    onMouseLeave={() => setHoveredMarker(null)}
-                    style={{
-                      default: { cursor: "pointer", opacity: dim ? 0.25 : 1 },
-                      hover: { cursor: "pointer", opacity: dim ? 0.5 : 1 },
-                      pressed: { cursor: "pointer", opacity: 1 },
-                    }}
-                  >
-                    <circle
-                      r={8}
-                      fill={color}
-                      opacity={0.3}
-                      className="animate-pulse-slow"
-                    />
-                    <circle r={5} fill={color} stroke="hsl(220 15% 6%)" strokeWidth={1} />
-                    <title>{`${m.name} — Score ${m.score}`}</title>
-                  </Marker>
-                );
-              })}
-
-            {layers.sanctions &&
-              sanctionsMarkers.map((m) => (
-                <Marker key={m.name} coordinates={m.coordinates}>
-                  <g transform="rotate(45)">
-                    <rect
-                      x={-4}
-                      y={-4}
-                      width={8}
-                      height={8}
-                      fill="hsl(0 72% 51% / 0.8)"
-                      stroke="hsl(0 72% 51%)"
-                      strokeWidth={1}
-                    />
-                  </g>
+            {layers.sanctions && sanctionsMarkers.map((m) => {
+              const p = project(m.coordinates[0], m.coordinates[1]);
+              if (!p) return null;
+              return (
+                <g key={m.name} transform={`translate(${p[0]} ${p[1]}) rotate(45)`}>
+                  <rect x={-4 / zoom} y={-4 / zoom} width={8 / zoom} height={8 / zoom}
+                    fill="hsl(0 72% 51% / 0.8)" stroke="hsl(0 72% 51%)" strokeWidth={1 / zoom} />
                   <title>{m.name}</title>
-                </Marker>
-              ))}
+                </g>
+              );
+            })}
 
-            {layers.catalysts &&
-              catalystMarkers.map((m) => (
-                <Marker key={`${m.company_id}-${m.name}`} coordinates={m.coordinates}>
-                  <circle
-                    r={6}
-                    fill="transparent"
-                    stroke="hsl(38 100% 50%)"
-                    strokeWidth={1.5}
-                    strokeDasharray="2 2"
-                  />
-                  <circle r={2} fill="hsl(38 100% 50%)" />
+            {layers.catalysts && catalystMarkers.map((m) => {
+              const p = project(m.coordinates[0], m.coordinates[1]);
+              if (!p) return null;
+              return (
+                <g key={`${m.company_id}-${m.name}`} transform={`translate(${p[0]} ${p[1]})`}>
+                  <circle r={6 / zoom} fill="transparent" stroke="hsl(38 100% 50%)"
+                    strokeWidth={1.5 / zoom} strokeDasharray={`${2 / zoom} ${2 / zoom}`} />
+                  <circle r={2 / zoom} fill="hsl(38 100% 50%)" />
                   <title>{m.name}</title>
-                </Marker>
-              ))}
-          </ZoomableGroup>
-        </ComposableMap>
+                </g>
+              );
+            })}
+          </g>
+        </svg>
 
         {mapDataLoading && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-card/40 animate-pulse">
-            <span className="text-xs font-mono text-primary">
-              Loading intelligence data...
-            </span>
+            <span className="text-xs font-mono text-primary">Loading intelligence data...</span>
           </div>
         )}
 
@@ -406,9 +358,7 @@ const NativeWorldMap = ({
             style={{ left: hoveredMarker.x, top: hoveredMarker.y }}
           >
             <div className="font-bold text-sm">{hoveredMarker.name}</div>
-            <div className="text-xs text-muted-foreground mt-0.5">
-              Scout Score: {hoveredMarker.score}
-            </div>
+            <div className="text-xs text-muted-foreground mt-0.5">Scout Score: {hoveredMarker.score}</div>
             <span
               className="mt-2 inline-block rounded px-2 py-0.5 text-[10px] font-mono font-bold"
               style={{
