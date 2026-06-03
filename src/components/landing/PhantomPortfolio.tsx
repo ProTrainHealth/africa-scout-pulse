@@ -5,13 +5,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';
 
-type Position = {
-  company_id: string;
-  entry_price: number;
-  current_price: number;
-  entry_date: string;
-  weight: number;
-};
 
 type PortfolioData = {
   totalReturnPct: number;

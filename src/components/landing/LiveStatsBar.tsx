@@ -24,7 +24,7 @@ const useCountUp = (target: number, duration = 1200) => {
   return current;
 };
 
-const AnimatedStat = ({ stat, hasError }: { stat: StatData; hasError: boolean }) => {
+const AnimatedStat = ({ stat }: { stat: StatData; hasError?: boolean }) => {
   const count = useCountUp(stat.value);
   return (
     <div className="glass-card rounded-xl p-4 text-center min-w-0">

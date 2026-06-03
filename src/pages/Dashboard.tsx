@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Globe, Star, BookOpen, Settings2,
-  LogOut, Menu, Activity, Calendar, TrendingUp, Users, Gauge, Shield, LineChart, Radio,
+  LogOut, Menu, Activity, Calendar, Gauge, Shield, LineChart, Radio,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';

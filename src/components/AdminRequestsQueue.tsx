@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { Loader2, Inbox } from 'lucide-react';
 
 type FeatureRequest = {
@@ -16,19 +15,6 @@ type FeatureRequest = {
   updated_at: string;
 };
 
-const statusColors: Record<string, string> = {
-  new: 'bg-blue-500/10 text-blue-500 border-blue-500/30',
-  in_review: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30',
-  accepted: 'bg-accent/10 text-accent border-accent/30',
-  rejected: 'bg-destructive/10 text-destructive border-destructive/30',
-  done: 'bg-primary/10 text-primary border-primary/30',
-};
-
-const priorityColors: Record<string, string> = {
-  low: 'bg-muted text-muted-foreground',
-  medium: 'bg-yellow-500/10 text-yellow-600',
-  high: 'bg-destructive/10 text-destructive',
-};
 
 const AdminRequestsQueue = () => {
   const { toast } = useToast();

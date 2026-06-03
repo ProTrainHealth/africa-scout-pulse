@@ -16,8 +16,8 @@ const mockChannel = vi.fn(() => ({
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    from: (...args: any[]) => mockFrom(...args),
-    channel: (...args: any[]) => mockChannel(...args),
+    from: (_table: string) => mockFrom(),
+    channel: (_name: string) => mockChannel(),
     removeChannel: vi.fn(),
     auth: {
       onAuthStateChange: vi.fn(() => ({
