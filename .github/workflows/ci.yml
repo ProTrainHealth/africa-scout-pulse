@@ -6,12 +6,19 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
+    name: Lint, Typecheck, Test, Build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -19,8 +26,18 @@ jobs:
           node-version: 20
           cache: 'npm'
 
+      - name: Cache Vite + Vitest
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules/.vite
+            node_modules/.cache
+          key: ${{ runner.os }}-vite-${{ hashFiles('package-lock.json', 'vite.config.ts', 'vitest.config.ts') }}
+          restore-keys: |
+            ${{ runner.os }}-vite-
+
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
       - name: Type check
         run: npx tsc --noEmit -p tsconfig.app.json
@@ -29,21 +46,43 @@ jobs:
         run: npm run lint
 
       - name: Run tests
-        run: npm run test
+        run: npm run test -- --reporter=verbose --reporter=junit --outputFile=./test-results/junit.xml
+        env:
+          CI: true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
 
       - name: Build
         run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-key
+          VITE_SUPABASE_PROJECT_ID: ci-placeholder
 
   supabase-migrations:
+    name: Validate Supabase migrations
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - name: Validate SQL migrations
         run: |
-          for f in supabase/migrations/*.sql; do
+          shopt -s nullglob
+          files=(supabase/migrations/*.sql)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No migration files found — skipping."
+            exit 0
+          fi
+          for f in "${files[@]}"; do
             echo "Checking $f..."
-            # Basic validation: must contain at least one SQL statement
-            if ! grep -qE '(CREATE|ALTER|INSERT|UPDATE|DELETE|DROP)' "$f"; then
+            if ! grep -qE '(CREATE|ALTER|INSERT|UPDATE|DELETE|DROP|GRANT|REVOKE|COMMENT)' "$f"; then
               echo "ERROR: $f contains no valid SQL statements"
               exit 1
             fi
