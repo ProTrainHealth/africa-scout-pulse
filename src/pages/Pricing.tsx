@@ -9,7 +9,7 @@ import FeatureRequestForm from '@/components/FeatureRequestForm';
 import Seo from '@/components/Seo';
 
 type BillingInterval = 'monthly' | 'quarterly' | 'yearly';
-type PaymentProvider = 'paypal';
+type PaymentProvider = 'paypal' | 'paystack';
 
 const tiers = [
   {
@@ -59,7 +59,9 @@ const Pricing = () => {
   const [billing, setBilling] = useState<BillingInterval>(
     paramPeriod && ['monthly', 'quarterly', 'yearly'].includes(paramPeriod) ? paramPeriod : 'monthly'
   );
-  const provider: PaymentProvider = 'paypal';
+  const [provider, setProvider] = useState<PaymentProvider>(
+    paramProvider && ['paypal', 'paystack'].includes(paramProvider) ? paramProvider : 'paypal'
+  );
 
   // Sync state to URL
   useEffect(() => {
@@ -67,7 +69,7 @@ const Pricing = () => {
     params.set('period', billing);
     params.set('provider', provider);
     setSearchParams(params, { replace: true });
-  }, [billing]);
+  }, [billing, provider]);
 
   const handleTierClick = (tier: typeof tiers[number]) => {
     if (!tier.planKey) {
@@ -108,7 +110,7 @@ const Pricing = () => {
         </div>
 
         {/* Billing toggle */}
-        <div className="mx-auto mb-4 flex max-w-xs items-center justify-center gap-1 rounded-xl border border-border/50 bg-secondary/50 p-1">
+        <div className="mx-auto mb-2 flex max-w-xs items-center justify-center gap-1 rounded-xl border border-border/50 bg-secondary/50 p-1">
           {(['monthly', 'quarterly', 'yearly'] as BillingInterval[]).map((interval) => (
             <button
               key={interval}
@@ -120,6 +122,23 @@ const Pricing = () => {
               }`}
             >
               {{ monthly: 'Monthly', quarterly: 'Quarterly', yearly: 'Yearly' }[interval]}
+            </button>
+          ))}
+        </div>
+
+        {/* Payment provider toggle */}
+        <div className="mx-auto mb-6 flex max-w-[200px] items-center justify-center gap-1 rounded-xl border border-border/40 bg-card/40 p-1">
+          {(['paypal', 'paystack'] as PaymentProvider[]).map((p) => (
+            <button
+              key={p}
+              onClick={() => setProvider(p)}
+              className={`flex-1 rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+                provider === p
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {p === 'paypal' ? 'PayPal' : 'Paystack'}
             </button>
           ))}
         </div>

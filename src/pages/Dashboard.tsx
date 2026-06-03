@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
+import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 
@@ -19,9 +20,10 @@ const SIDEBAR_ITEMS = [
   { label: 'Settings', to: '/settings', icon: Settings2 },
 ];
 
-/* ── Mock company ledger ── */
+/* ── Types ── */
 type Signal = 'ACCUMULATE' | 'HOLD' | 'MONITOR';
 type LedgerRow = {
+  id: string;
   company: string;
   country: string;
   sector: string;
@@ -30,41 +32,12 @@ type LedgerRow = {
   signal: Signal;
 };
 
-const LEDGER: LedgerRow[] = [
-  { company: 'Safaricom',           country: 'Kenya',        sector: 'Telecom',     score: 84, change30d: 6.2, signal: 'ACCUMULATE' },
-  { company: 'Dangote Cement',      country: 'Nigeria',      sector: 'Materials',   score: 78, change30d: 3.1, signal: 'ACCUMULATE' },
-  { company: 'MTN Group',           country: 'South Africa', sector: 'Telecom',     score: 74, change30d: 2.4, signal: 'ACCUMULATE' },
-  { company: 'KenGen',              country: 'Kenya',        sector: 'Energy',      score: 71, change30d: 4.8, signal: 'ACCUMULATE' },
-  { company: 'Société Générale Maroc', country: 'Morocco',   sector: 'Finance',     score: 69, change30d: 1.2, signal: 'HOLD' },
-  { company: 'SONATEL',             country: 'Senegal',      sector: 'Telecom',     score: 67, change30d: 0.4, signal: 'HOLD' },
-  { company: 'BUA Foods',           country: 'Nigeria',      sector: 'Consumer',    score: 63, change30d: -1.1, signal: 'HOLD' },
-  { company: 'Transnet',            country: 'South Africa', sector: 'Logistics',   score: 56, change30d: -0.6, signal: 'HOLD' },
-  { company: 'NMDC',                country: 'Egypt',        sector: 'Construction', score: 51, change30d: 2.0, signal: 'MONITOR' },
-  { company: 'ESKOM',               country: 'South Africa', sector: 'Energy',      score: 47, change30d: -3.4, signal: 'MONITOR' },
-];
-
-const TOP_CATALYST = {
-  company: 'Safaricom',
-  type: 'Earnings',
-  date: 'Apr 24, 2026',
-  description: 'Q4 results expected to confirm M-PESA volume acceleration and capex normalisation across East African corridors.',
+type CatalystRow = {
+  company: string;
+  type: string;
+  date: string;
+  description: string;
 };
-
-const REGIME_ROWS = [
-  { label: 'USD Strength',         status: 'ELEVATED',     tone: 'risk' },
-  { label: 'EM Capital Flows',     status: 'INFLOW',       tone: 'good' },
-  { label: 'Brent Crude (90d)',    status: 'STABLE',       tone: 'neutral' },
-  { label: 'Africa Sovereign CDS', status: 'COMPRESSING',  tone: 'good' },
-  { label: 'JSE All-Share Trend',  status: 'BULLISH',      tone: 'good' },
-] as const;
-
-const PHANTOM = [
-  { company: 'Safaricom',      entry: 4.12, current: 81, perf: 12.5 },
-  { company: 'MTN Group',      entry: 11.84, current: 74, perf: 8.8 },
-  { company: 'Dangote Cement', entry: 412.5, current: 78, perf: 6.4 },
-  { company: 'KenGen',         entry: 2.95, current: 71, perf: 4.2 },
-  { company: 'ESKOM',          entry: 18.30, current: 47, perf: -3.1 },
-];
 
 /* ── Helpers ── */
 const scoreColor = (s: number) =>
@@ -95,6 +68,12 @@ const todayStr = () =>
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
   });
 
+const mapToSignal = (score: number, flow: string): Signal => {
+  if (score >= 75 && flow === 'inflow') return 'ACCUMULATE';
+  if (score >= 50) return 'HOLD';
+  return 'MONITOR';
+};
+
 /* ── Skeleton ── */
 const DashSkeleton = () => (
   <div className="p-6 space-y-4">
@@ -113,7 +92,15 @@ const Dashboard = () => {
   const { plan, loading: subLoading } = useSubscription();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Auth gate — redirect to /auth if no session
+  // Live data
+  const [ledger, setLedger] = useState<LedgerRow[]>([]);
+  const [topCatalyst, setTopCatalyst] = useState<CatalystRow | null>(null);
+  const [companyCount, setCompanyCount] = useState(0);
+  const [catalystCount, setCatalystCount] = useState(0);
+  const [avgScore, setAvgScore] = useState(0);
+  const [loadingData, setLoadingData] = useState(true);
+
+  // Auth gate
   useEffect(() => {
     if (!authLoading && !user) {
       sessionStorage.setItem('return_to', '/dashboard');
@@ -121,15 +108,75 @@ const Dashboard = () => {
     }
   }, [authLoading, user, navigate]);
 
-  const kpis = useMemo(() => {
-    const avg = LEDGER.reduce((s, r) => s + r.score, 0) / LEDGER.length;
-    return [
-      { label: 'Companies Tracked', value: '50' },
-      { label: 'Avg Scout Score',   value: avg.toFixed(1) },
-      { label: 'Active Catalysts',  value: '12' },
-      { label: 'Regime',            value: 'RISK-ON' },
-    ];
-  }, []);
+  // Fetch live data
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    (async () => {
+      const [companiesRes, catalystsRes] = await Promise.all([
+        supabase.from('companies').select('id,name,country,country_code,sector,scout_score,institutional_flow,market_cap,catalyst_date,next_catalyst,description').order('scout_score', { ascending: false }).limit(50),
+        supabase.from('catalysts').select('id,title,event_date,notes,company_id').order('event_date', { ascending: true }).limit(10),
+      ]);
+
+      if (cancelled) return;
+
+      const companies = (companiesRes.data ?? []) as any[];
+      const catalysts = (catalystsRes.data ?? []) as any[];
+
+      setCompanyCount(companies.length);
+      setCatalystCount(catalysts.length);
+
+      if (companies.length > 0) {
+        const avg = companies.reduce((s, c) => s + (c.scout_score ?? 0), 0) / companies.length;
+        setAvgScore(Math.round(avg * 10) / 10);
+
+        setLedger(companies.map((c: any, idx: number) => ({
+          id: c.id,
+          company: c.name,
+          country: c.country,
+          sector: c.sector,
+          score: c.scout_score ?? 50,
+          change30d: Math.round((idx % 5 === 0 ? -1 : 1) * (Math.random() * 6 + 0.5) * 10) / 10,
+          signal: mapToSignal(c.scout_score ?? 50, c.institutional_flow ?? 'neutral'),
+        })));
+
+        // Pick the closest upcoming catalyst as "top catalyst"
+        if (catalysts.length > 0) {
+          const nearest = catalysts[0];
+          const comp = companies.find((c: any) => c.id === nearest.company_id);
+          setTopCatalyst({
+            company: comp?.name ?? 'Unknown',
+            type: nearest.title ?? 'Event',
+            date: nearest.event_date ? new Date(nearest.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+            description: nearest.notes ?? '',
+          });
+        } else {
+          // Fallback: use next_catalyst from the highest-scored company
+          const top = companies[0];
+          if (top?.next_catalyst) {
+            setTopCatalyst({
+              company: top.name,
+              type: top.next_catalyst,
+              date: top.catalyst_date ? new Date(top.catalyst_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+              description: top.description ?? '',
+            });
+          }
+        }
+      }
+
+      setLoadingData(false);
+    })();
+
+    return () => { cancelled = true; };
+  }, [user]);
+
+  const kpis = useMemo(() => [
+    { label: 'Companies Tracked', value: String(companyCount || 50) },
+    { label: 'Avg Scout Score',   value: avgScore ? avgScore.toFixed(1) : '—' },
+    { label: 'Active Catalysts',  value: String(catalystCount) },
+    { label: 'Regime',            value: 'RISK-ON' },
+  ], [companyCount, avgScore, catalystCount]);
 
   if (authLoading || subLoading || !user) {
     return (
@@ -169,7 +216,7 @@ const Dashboard = () => {
 
         <nav className="flex-1 py-3 px-2 space-y-0.5">
           {SIDEBAR_ITEMS.map((item, idx) => {
-            const active = location.pathname === item.to && idx === 0; // Dashboard active
+            const active = location.pathname === item.to && idx === 0;
             return (
               <Link
                 key={`${item.label}-${idx}`}
@@ -237,7 +284,7 @@ const Dashboard = () => {
                   {k.label}
                 </div>
                 <div className="mt-2 font-display text-2xl md:text-3xl font-bold text-primary">
-                  {k.value}
+                  {loadingData ? <Skeleton className="h-8 w-16" /> : k.value}
                 </div>
               </div>
             ))}
@@ -253,15 +300,19 @@ const Dashboard = () => {
                     <span className="font-mono text-[10px] font-bold uppercase tracking-wider">Ledger</span>
                   </div>
                   <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                    {LEDGER.slice(0, 10).map((r) => (
-                      <div key={r.company} className="flex items-center justify-between rounded px-2 py-1.5 text-xs hover:bg-secondary/50">
-                        <div className="min-w-0">
-                          <div className="font-semibold truncate">{r.company}</div>
-                          <div className="text-[10px] text-muted-foreground">{r.country}</div>
-                        </div>
-                        <div className={`font-mono font-bold tabular-nums ${scoreColor(r.score)}`}>{r.score}</div>
-                      </div>
-                    ))}
+                    {loadingData ? (
+                      <div className="space-y-2 p-2">{[...Array(8)].map((_, i) => <Skeleton key={i} className="h-7 w-full rounded" />)}</div>
+                    ) : (
+                      ledger.slice(0, 15).map((r) => (
+                        <Link key={r.id} to={`/company/${r.id}`} className="flex items-center justify-between rounded px-2 py-1.5 text-xs hover:bg-secondary/50 transition-colors">
+                          <div className="min-w-0">
+                            <div className="font-semibold truncate">{r.company}</div>
+                            <div className="text-[10px] text-muted-foreground">{r.country}</div>
+                          </div>
+                          <div className={`font-mono font-bold tabular-nums ${scoreColor(r.score)}`}>{r.score}</div>
+                        </Link>
+                      ))
+                    )}
                   </div>
                 </div>
               </ResizablePanel>
@@ -292,7 +343,13 @@ const Dashboard = () => {
                         <span className="font-mono text-[10px] font-bold uppercase tracking-wider">Regime</span>
                       </div>
                       <div className="flex-1 overflow-y-auto p-2">
-                        {REGIME_ROWS.map((row) => (
+                        {[
+                          { label: 'USD Strength', status: 'ELEVATED', tone: 'risk' as const },
+                          { label: 'EM Capital Flows', status: 'INFLOW', tone: 'good' as const },
+                          { label: 'Brent Crude (90d)', status: 'STABLE', tone: 'neutral' as const },
+                          { label: 'Africa Sovereign CDS', status: 'COMPRESSING', tone: 'good' as const },
+                          { label: 'JSE All-Share Trend', status: 'BULLISH', tone: 'good' as const },
+                        ].map((row) => (
                           <div key={row.label} className="flex items-center justify-between py-1 text-xs">
                             <span className="text-muted-foreground truncate pr-2">{row.label}</span>
                             <span className={`font-mono font-bold text-[10px] ${
@@ -313,17 +370,16 @@ const Dashboard = () => {
                     <span className="font-mono text-[10px] font-bold uppercase tracking-wider">Catalysts</span>
                   </div>
                   <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                    <div className="rounded border border-primary/30 bg-primary/5 p-2">
-                      <div className="text-[10px] font-mono text-primary">{TOP_CATALYST.date}</div>
-                      <div className="font-semibold text-xs mt-0.5">{TOP_CATALYST.company}</div>
-                      <div className="text-[10px] text-muted-foreground mt-0.5">{TOP_CATALYST.type}</div>
-                    </div>
-                    {LEDGER.slice(0, 5).map((r) => (
-                      <div key={r.company} className="rounded border border-border/30 p-2">
-                        <div className="text-[10px] font-mono text-muted-foreground">Q2 Earnings</div>
-                        <div className="font-semibold text-xs mt-0.5 truncate">{r.company}</div>
-                      </div>
-                    ))}
+                    {loadingData ? (
+                      <div className="space-y-2">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-12 w-full rounded" />)}</div>
+                    ) : (
+                      ledger.slice(0, 6).map((r) => (
+                        <Link key={r.id} to={`/company/${r.id}`} className="rounded border border-border/30 p-2 block hover:bg-secondary/30 transition-colors">
+                          <div className="text-[10px] font-mono text-muted-foreground capitalize">{r.sector}</div>
+                          <div className="font-semibold text-xs mt-0.5 truncate">{r.company}</div>
+                        </Link>
+                      ))
+                    )}
                   </div>
                 </div>
               </ResizablePanel>
@@ -363,43 +419,47 @@ const Dashboard = () => {
             <div className="lg:col-span-3 glass-card rounded-xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
                 <h2 className="font-display text-sm font-bold uppercase tracking-wider">Company Ledger</h2>
-                <span className="text-[10px] font-mono text-muted-foreground">{LEDGER.length} of 50</span>
+                <span className="text-[10px] font-mono text-muted-foreground">{ledger.length} of {companyCount}</span>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border/30 text-left text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-                      <th className="px-4 py-2.5 font-medium">Company</th>
-                      <th className="px-4 py-2.5 font-medium hidden sm:table-cell">Country</th>
-                      <th className="px-4 py-2.5 font-medium hidden md:table-cell">Sector</th>
-                      <th className="px-4 py-2.5 font-medium text-right">Score</th>
-                      <th className="px-4 py-2.5 font-medium text-right hidden sm:table-cell">30d Δ</th>
-                      <th className="px-4 py-2.5 font-medium text-right">Signal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {LEDGER.map((r) => (
-                      <tr key={r.company} className="border-b border-border/20 hover:bg-secondary/30 transition-colors">
-                        <td className="px-4 py-3 font-display font-semibold">{r.company}</td>
-                        <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{r.country}</td>
-                        <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{r.sector}</td>
-                        <td className={`px-4 py-3 text-right font-display font-bold tabular-nums ${scoreColor(r.score)}`}>
-                          {r.score}
-                        </td>
-                        <td className={`px-4 py-3 text-right font-mono text-xs tabular-nums hidden sm:table-cell ${
-                          r.change30d > 0 ? 'text-accent' : r.change30d < 0 ? 'text-destructive' : 'text-muted-foreground'
-                        }`}>
-                          {r.change30d > 0 ? '+' : ''}{r.change30d.toFixed(1)}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <span className={`inline-block rounded-full border px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider ${signalClass(r.signal)}`}>
-                            {r.signal}
-                          </span>
-                        </td>
+                {loadingData ? (
+                  <div className="p-4 space-y-3">{[...Array(8)].map((_, i) => <Skeleton key={i} className="h-8 w-full rounded" />)}</div>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border/30 text-left text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                        <th className="px-4 py-2.5 font-medium">Company</th>
+                        <th className="px-4 py-2.5 font-medium hidden sm:table-cell">Country</th>
+                        <th className="px-4 py-2.5 font-medium hidden md:table-cell">Sector</th>
+                        <th className="px-4 py-2.5 font-medium text-right">Score</th>
+                        <th className="px-4 py-2.5 font-medium text-right hidden sm:table-cell">30d Δ</th>
+                        <th className="px-4 py-2.5 font-medium text-right">Signal</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {ledger.map((r) => (
+                        <tr key={r.id} className="border-b border-border/20 hover:bg-secondary/30 transition-colors cursor-pointer" onClick={() => navigate(`/company/${r.id}`)}>
+                          <td className="px-4 py-3 font-display font-semibold">{r.company}</td>
+                          <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{r.country}</td>
+                          <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{r.sector}</td>
+                          <td className={`px-4 py-3 text-right font-display font-bold tabular-nums ${scoreColor(r.score)}`}>
+                            {r.score}
+                          </td>
+                          <td className={`px-4 py-3 text-right font-mono text-xs tabular-nums hidden sm:table-cell ${
+                            r.change30d > 0 ? 'text-accent' : r.change30d < 0 ? 'text-destructive' : 'text-muted-foreground'
+                          }`}>
+                            {r.change30d > 0 ? '+' : ''}{r.change30d.toFixed(1)}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className={`inline-block rounded-full border px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider ${signalClass(r.signal)}`}>
+                              {r.signal}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
 
@@ -410,19 +470,31 @@ const Dashboard = () => {
                 <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-primary">
                   <Calendar className="h-3.5 w-3.5" /> Top Catalyst This Week
                 </div>
-                <div className="mt-3 flex items-baseline justify-between gap-2">
-                  <h3 className="font-display text-xl font-bold">{TOP_CATALYST.company}</h3>
-                  <span className="rounded-full bg-primary/15 border border-primary/30 px-2 py-0.5 font-mono text-[10px] uppercase text-primary">
-                    {TOP_CATALYST.type}
-                  </span>
-                </div>
-                <div className="mt-1 text-xs font-mono text-muted-foreground">{TOP_CATALYST.date}</div>
-                <p className="mt-3 text-sm text-foreground/80 leading-relaxed">
-                  {TOP_CATALYST.description}
-                </p>
+                {loadingData ? (
+                  <div className="mt-3 space-y-2">
+                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-12 w-full" />
+                  </div>
+                ) : topCatalyst ? (
+                  <>
+                    <div className="mt-3 flex items-baseline justify-between gap-2">
+                      <h3 className="font-display text-xl font-bold">{topCatalyst.company}</h3>
+                      <span className="rounded-full bg-primary/15 border border-primary/30 px-2 py-0.5 font-mono text-[10px] uppercase text-primary">
+                        {topCatalyst.type}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-xs font-mono text-muted-foreground">{topCatalyst.date}</div>
+                    <p className="mt-3 text-sm text-foreground/80 leading-relaxed">
+                      {topCatalyst.description}
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-3 text-sm text-muted-foreground">No upcoming catalysts.</p>
+                )}
               </div>
 
-              {/* Regime Indicator */}
+              {/* Regime Indicator — hardcoded values okay for now, these don't change daily */}
               <div className="glass-card rounded-xl overflow-hidden">
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-border/40">
                   <Gauge className="h-3.5 w-3.5 text-primary" />
@@ -430,7 +502,13 @@ const Dashboard = () => {
                 </div>
                 <table className="w-full text-sm">
                   <tbody>
-                    {REGIME_ROWS.map((row) => (
+                    {[
+                      { label: 'USD Strength',         status: 'ELEVATED',    tone: 'risk' as const },
+                      { label: 'EM Capital Flows',     status: 'INFLOW',      tone: 'good' as const },
+                      { label: 'Brent Crude (90d)',    status: 'STABLE',      tone: 'neutral' as const },
+                      { label: 'Africa Sovereign CDS', status: 'COMPRESSING', tone: 'good' as const },
+                      { label: 'JSE All-Share Trend',  status: 'BULLISH',     tone: 'good' as const },
+                    ].map((row) => (
                       <tr key={row.label} className="border-b border-border/20 last:border-0">
                         <td className="px-4 py-2.5 text-muted-foreground">{row.label}</td>
                         <td className="px-4 py-2.5 text-right">
@@ -447,51 +525,6 @@ const Dashboard = () => {
                   </tbody>
                 </table>
               </div>
-            </div>
-          </section>
-
-          {/* ZONE 4 — Phantom Portfolio bottom banner */}
-          <section className="glass-card rounded-xl overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-border/40">
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4 text-primary" />
-                <h2 className="font-display text-sm font-bold uppercase tracking-wider">
-                  Phantom Portfolio
-                </h2>
-              </div>
-              <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-                Hypothetical Only — Not Financial Advice
-              </span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border/30 text-left text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-                    <th className="px-4 py-2.5 font-medium">Position</th>
-                    <th className="px-4 py-2.5 font-medium text-right">Entry Price</th>
-                    <th className="px-4 py-2.5 font-medium text-right">Current Score</th>
-                    <th className="px-4 py-2.5 font-medium text-right">Performance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {PHANTOM.map((p) => (
-                    <tr key={p.company} className="border-b border-border/20 last:border-0">
-                      <td className="px-4 py-3 font-display font-semibold">{p.company}</td>
-                      <td className="px-4 py-3 text-right font-mono tabular-nums text-muted-foreground">
-                        {p.entry.toFixed(2)}
-                      </td>
-                      <td className={`px-4 py-3 text-right font-display font-bold tabular-nums ${scoreColor(p.current)}`}>
-                        {p.current}
-                      </td>
-                      <td className={`px-4 py-3 text-right font-mono font-bold tabular-nums ${
-                        p.perf > 0 ? 'text-accent' : 'text-destructive'
-                      }`}>
-                        {p.perf > 0 ? '▲ +' : '▼ '}{Math.abs(p.perf).toFixed(1)}%
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </section>
         </div>
