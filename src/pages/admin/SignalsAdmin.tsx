@@ -96,13 +96,14 @@ const SignalsAdmin = () => {
   };
 
   const handleSave = async (publish: boolean) => {
+    const isPublishing = publish || isPublic;
     const payload = {
       company_id: companyId,
       summary,
       confidence,
       analyst_tag: analystTag,
-      is_public: publish || isPublic,
-      published_at: (publish || isPublic) ? new Date().toISOString() : null,
+      is_public: isPublishing,
+      ...(isPublishing ? { published_at: new Date().toISOString() } : {}),
     };
 
     if (editing) {
@@ -127,10 +128,9 @@ const SignalsAdmin = () => {
   };
 
   const toggleVisibility = async (id: string, current: boolean) => {
-    await supabase.from('signals').update({
-      is_public: !current,
-      published_at: !current ? new Date().toISOString() : null,
-    }).eq('id', id);
+    const update: { is_public: boolean; published_at?: string } = { is_public: !current };
+    if (!current) update.published_at = new Date().toISOString();
+    await supabase.from('signals').update(update).eq('id', id);
     fetchSignals();
   };
 
