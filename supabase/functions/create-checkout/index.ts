@@ -35,10 +35,14 @@ Deno.serve(async (req) => {
 
     const userId = user.id
 
-    const { plan, interval } = await req.json()
+    const { plan, interval, provider = 'paypal' } = await req.json()
 
     if (!['analyst', 'boardroom'].includes(plan)) {
       return jsonError(400, 'Invalid plan')
+    }
+
+    if (!['paypal', 'paystack'].includes(provider)) {
+      return jsonError(400, 'Invalid provider')
     }
 
     const validInterval = ['monthly', 'quarterly', 'yearly'].includes(interval) ? interval : 'monthly'
@@ -55,12 +59,54 @@ Deno.serve(async (req) => {
       yearly: 'Yearly',
     }
 
+    const appOrigin = (Deno.env.get('APP_ORIGIN') || '').replace(/\/$/, '')
+
+    if (provider === 'paystack') {
+      const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY')
+      if (!paystackSecretKey) {
+        return jsonError(500, 'Payment provider not configured')
+      }
+      if (!appOrigin) {
+        return jsonError(500, 'Application origin not configured')
+      }
+
+      const paystackRes = await fetch('https://api.paystack.co/transaction/initialize', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${paystackSecretKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: user.email,
+          amount: amount.toString(),
+          currency: 'USD',
+          metadata: {
+            user_id: userId,
+            plan,
+            interval: validInterval,
+          },
+          callback_url: `${appOrigin}/dashboard?payment=success&provider=paystack`,
+          cancel_url: `${appOrigin}/pricing?payment=canceled`,
+        }),
+      })
+
+      const paystackData = await paystackRes.json()
+
+      if (!paystackData.status || !paystackData.data?.authorization_url) {
+        console.error('[create-checkout] Paystack error:', paystackData)
+        return jsonError(500, 'Failed to create payment order')
+      }
+
+      return new Response(
+        JSON.stringify({ url: paystackData.data.authorization_url, provider: 'paystack', reference: paystackData.data.reference }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // PayPal flow (existing)
     const clientId = Deno.env.get('PAYPAL_CLIENT_ID')
     const clientSecret = Deno.env.get('PAYPAL_CLIENT_SECRET')
     const paypalEnv = Deno.env.get('PAYPAL_ENV') || 'sandbox'
-    // Hardcoded app origin from server-side secret — never trust client headers
-    // for building OAuth/payment return URLs.
-    const appOrigin = (Deno.env.get('APP_ORIGIN') || '').replace(/\/$/, '')
 
     if (!clientId || !clientSecret) {
       return jsonError(500, 'Payment provider not configured')
@@ -102,7 +148,7 @@ Deno.serve(async (req) => {
           custom_id: JSON.stringify({ user_id: userId, plan, interval: validInterval }),
         }],
         application_context: {
-          return_url: `${appOrigin}/dashboard?payment=success`,
+          return_url: `${appOrigin}/dashboard?payment=success&provider=paypal`,
           cancel_url: `${appOrigin}/pricing?payment=canceled`,
         },
       }),

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertCircle, CreditCard } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 
 type BillingInterval = 'monthly' | 'quarterly' | 'yearly';
+type PaymentProvider = 'paypal' | 'paystack';
 
 const prices: Record<string, Record<BillingInterval, number>> = {
   analyst: { monthly: 13900, quarterly: 36900, yearly: 129900 },
@@ -30,6 +31,7 @@ const Checkout = () => {
 
   const plan = params.get('plan') || 'analyst';
   const period = (params.get('period') || 'monthly') as BillingInterval;
+  const [provider, setProvider] = useState<PaymentProvider>('paypal');
 
   const [status, setStatus] = useState<'loading' | 'ready' | 'processing' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
@@ -43,12 +45,12 @@ const Checkout = () => {
     if (user) setStatus('ready');
   }, [user, authLoading]);
 
-  const handlePayPalCheckout = async () => {
+  const handleCheckout = async () => {
     setStatus('processing');
     try {
-      console.log('[Checkout] Invoking create-checkout with:', { plan, interval: period });
+      console.log('[Checkout] Invoking create-checkout with:', { plan, interval: period, provider });
       const res = await supabase.functions.invoke('create-checkout', {
-        body: { plan, provider: 'paypal', interval: period },
+        body: { plan, provider, interval: period },
       });
 
       console.log('[Checkout] Edge function response:', res);
@@ -58,15 +60,15 @@ const Checkout = () => {
       }
 
       if (!res.data?.url) {
-        throw new Error(res.data?.error || 'No PayPal approval URL returned');
+        throw new Error(res.data?.error || 'No payment URL returned');
       }
 
-      toast({ title: 'Redirecting to PayPal...', description: 'You will complete payment on PayPal.' });
+      toast({ title: `Redirecting to ${provider === 'paypal' ? 'PayPal' : 'Paystack'}...`, description: 'You will complete payment on the provider\'s site.' });
       window.location.href = res.data.url;
     } catch (err: any) {
       console.error('[Checkout] Error:', err);
       setStatus('error');
-      setErrorMsg(err.message || 'PayPal checkout failed');
+      setErrorMsg(err.message || 'Checkout failed');
       toast({ title: 'Checkout error', description: err.message, variant: 'destructive' });
     }
   };
@@ -109,10 +111,35 @@ const Checkout = () => {
                 <span>Billing</span>
                 <span>{intervalLabels[period]}</span>
               </div>
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Provider</span>
-                <span>PayPal</span>
-              </div>
+            </div>
+          </div>
+
+          {/* Payment provider selection */}
+          <div className="mt-4 rounded-xl border border-border/50 bg-card p-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Payment Method</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setProvider('paypal')}
+                className={`flex items-center justify-center gap-2 rounded-lg border p-3 text-sm font-medium transition-colors ${
+                  provider === 'paypal'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border/50 bg-secondary/30 text-muted-foreground hover:bg-secondary/60'
+                }`}
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106Z"/></svg>
+                PayPal
+              </button>
+              <button
+                onClick={() => setProvider('paystack')}
+                className={`flex items-center justify-center gap-2 rounded-lg border p-3 text-sm font-medium transition-colors ${
+                  provider === 'paystack'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border/50 bg-secondary/30 text-muted-foreground hover:bg-secondary/60'
+                }`}
+              >
+                <CreditCard className="h-5 w-5" />
+                Paystack
+              </button>
             </div>
           </div>
 
@@ -127,19 +154,19 @@ const Checkout = () => {
               </div>
             )}
             <Button
-              onClick={handlePayPalCheckout}
+              onClick={handleCheckout}
               disabled={status === 'processing' || status === 'loading'}
-              className="w-full bg-[hsl(210,80%,50%)] hover:bg-[hsl(210,80%,45%)] text-white"
+              className="w-full"
               size="lg"
             >
               {status === 'processing' ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
               ) : (
-                'Pay with PayPal'
+                `Pay with ${provider === 'paypal' ? 'PayPal' : 'Paystack'}`
               )}
             </Button>
             <p className="text-center text-[10px] text-muted-foreground">
-              You will be redirected to PayPal to complete your subscription securely.
+              You will be redirected to complete your subscription securely.
             </p>
           </div>
         </div>
