@@ -55,6 +55,7 @@ const Pricing = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const paramPeriod = searchParams.get('period') as BillingInterval | null;
+  const paramProvider = searchParams.get('provider') as PaymentProvider | null;
 
   const [billing, setBilling] = useState<BillingInterval>(
     paramPeriod && ['monthly', 'quarterly', 'yearly'].includes(paramPeriod) ? paramPeriod : 'monthly'

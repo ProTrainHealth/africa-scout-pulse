@@ -50,6 +50,30 @@ export type Database = {
         }
         Relationships: []
       }
+      boardroom_waitlist: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          notified: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string
+          id?: string
+          notified?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          notified?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       briefings: {
         Row: {
           analyst_id: string | null
