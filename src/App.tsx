@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import RegimeAdmin from "./pages/admin/RegimeAdmin";
 import SignalsAdmin from "./pages/admin/SignalsAdmin";
+import CatalystsAdmin from "./pages/admin/CatalystsAdmin";
 import MacroAdmin from "./pages/admin/MacroAdmin";
 import Resources from "./pages/Resources";
 import ResourceDetail from "./pages/ResourceDetail";
