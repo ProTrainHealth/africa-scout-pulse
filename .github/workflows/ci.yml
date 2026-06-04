@@ -67,12 +67,60 @@ jobs:
           VITE_SUPABASE_PROJECT_ID: ci-placeholder
 
   supabase-migrations:
-    name: Validate Supabase migrations
+    name: Apply Supabase migrations against test DB
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
     steps:
       - uses: actions/checkout@v4
-      - name: Validate SQL migrations
+
+      - name: Install psql client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Bootstrap Supabase-compatible schema
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+          CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+          CREATE SCHEMA IF NOT EXISTS auth;
+          CREATE TABLE IF NOT EXISTS auth.users (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            email text,
+            created_at timestamptz DEFAULT now()
+          );
+          CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT NULL::uuid $$;
+          CREATE OR REPLACE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $$ SELECT 'service_role'::text $$;
+          DO $$ BEGIN
+            CREATE ROLE anon NOLOGIN;
+          EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+          DO $$ BEGIN
+            CREATE ROLE authenticated NOLOGIN;
+          EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+          DO $$ BEGIN
+            CREATE ROLE service_role NOLOGIN;
+          EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+          SQL
+
+      - name: Apply migrations in order
         run: |
           shopt -s nullglob
           files=(supabase/migrations/*.sql)
@@ -80,10 +128,16 @@ jobs:
             echo "No migration files found — skipping."
             exit 0
           fi
-          for f in "${files[@]}"; do
-            echo "Checking $f..."
-            if ! grep -qE '(CREATE|ALTER|INSERT|UPDATE|DELETE|DROP|GRANT|REVOKE|COMMENT)' "$f"; then
-              echo "ERROR: $f contains no valid SQL statements"
-              exit 1
-            fi
+          IFS=$'\n' sorted=($(sort <<<"${files[*]}"))
+          unset IFS
+          for f in "${sorted[@]}"; do
+            echo "::group::Applying $f"
+            psql -v ON_ERROR_STOP=1 -f "$f"
+            echo "::endgroup::"
           done
+
+      - name: Sanity check seeded data
+        run: |
+          psql -v ON_ERROR_STOP=1 -c "SELECT COUNT(*) AS companies FROM public.companies;"
+          psql -v ON_ERROR_STOP=1 -c "SELECT COUNT(*) AS catalysts FROM public.catalysts;"
+
