@@ -7,8 +7,18 @@ vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => mockUseAuth(),
 }));
 
-// Mock supabase
-const mockFrom = vi.fn();
+// Mock supabase — default builder resolves to empty so unrelated effects don't reject
+const makeDefaultBuilder = () => {
+  const b: Record<string, any> = {};
+  ['select', 'eq', 'order', 'in', 'limit', 'gt', 'gte', 'lt', 'lte', 'neq'].forEach(
+    (m) => (b[m] = vi.fn().mockReturnValue(b))
+  );
+  b.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+  b.single = vi.fn().mockResolvedValue({ data: null, error: null });
+  b.then = (ok: any, err: any) => Promise.resolve({ data: [], error: null }).then(ok, err);
+  return b;
+};
+const mockFrom = vi.fn(() => makeDefaultBuilder());
 const mockChannel = vi.fn(() => ({
   on: vi.fn().mockReturnThis(),
   subscribe: vi.fn(),
