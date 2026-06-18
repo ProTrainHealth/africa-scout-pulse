@@ -5,7 +5,6 @@ const Privacy = () => (
     <Seo
       title="Privacy Policy | Africa Scout Pulse"
       description="How Africa Scout Pulse collects, uses, and protects your data."
-      canonical="/privacy"
     />
     <h1 className="font-display text-3xl mb-6">Privacy Policy</h1>
     <p className="text-sm text-muted-foreground mb-8">Last updated: June 18, 2026</p>
