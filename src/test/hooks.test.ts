@@ -137,6 +137,7 @@ describe('useWatchlist', () => {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       order: vi.fn().mockResolvedValue({ data: mockItems, error: null }),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
     }));
 
     const { useWatchlist } = await import('@/hooks/useWatchlist');
