@@ -23,8 +23,11 @@ import Watchlist from "./pages/Watchlist";
 import Settings from "./pages/Settings";
 import Transparency from "./pages/Transparency";
 import Briefings from "./pages/Briefings";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
 import CommandPalette from "./components/CommandPalette";
+import DisclaimerFooter from "./components/DisclaimerFooter";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -65,8 +68,11 @@ const App = () => {
           <Route path="/settings" element={<Settings />} />
           <Route path="/transparency" element={<Transparency />} />
           <Route path="/briefings" element={<Briefings />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <DisclaimerFooter />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
