@@ -12,6 +12,7 @@ import RegimeAdmin from "./pages/admin/RegimeAdmin";
 import SignalsAdmin from "./pages/admin/SignalsAdmin";
 import CatalystsAdmin from "./pages/admin/CatalystsAdmin";
 import MacroAdmin from "./pages/admin/MacroAdmin";
+import AdminSecurity from "./pages/admin/Security";
 import Resources from "./pages/Resources";
 import ResourceDetail from "./pages/ResourceDetail";
 import Pricing from "./pages/Pricing";
@@ -57,6 +58,7 @@ const App = () => {
           <Route path="/admin/signals" element={<SignalsAdmin />} />
           <Route path="/admin/catalysts" element={<CatalystsAdmin />} />
           <Route path="/admin/macro" element={<MacroAdmin />} />
+          <Route path="/admin/security" element={<AdminSecurity />} />
           <Route path="/resources" element={<Resources />} />
           <Route path="/resources/:id" element={<ResourceDetail />} />
           <Route path="/pricing" element={<Pricing />} />
