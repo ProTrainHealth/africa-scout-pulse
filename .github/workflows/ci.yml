@@ -45,6 +45,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Dependency audit (fail on high/critical)
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Run tests
         run: npm run test -- --reporter=verbose --reporter=junit --outputFile=./test-results/junit.xml
         env:
