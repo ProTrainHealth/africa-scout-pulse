@@ -156,6 +156,7 @@ Deno.serve(async (req) => {
         }, { onConflict: 'user_id' })
       }
 
+    } else if (provider === 'paypal') {
       const eventType = body.event_type
       const resource = body.resource
 
@@ -186,16 +187,45 @@ Deno.serve(async (req) => {
         }, { onConflict: 'user_id' })
       }
 
-      if (eventType === 'BILLING.SUBSCRIPTION.CANCELLED') {
+      // Cancellation, suspension, expiration, payment failure
+      if (
+        eventType === 'BILLING.SUBSCRIPTION.CANCELLED' ||
+        eventType === 'BILLING.SUBSCRIPTION.SUSPENDED' ||
+        eventType === 'BILLING.SUBSCRIPTION.EXPIRED' ||
+        eventType === 'BILLING.SUBSCRIPTION.PAYMENT.FAILED'
+      ) {
         const subscriptionId = resource?.id
         if (subscriptionId) {
+          const newStatus =
+            eventType === 'BILLING.SUBSCRIPTION.PAYMENT.FAILED' ? 'past_due'
+            : eventType === 'BILLING.SUBSCRIPTION.SUSPENDED' ? 'paused'
+            : 'canceled'
           await supabaseAdmin.from('subscriptions')
-            .update({ status: 'canceled' })
+            .update({
+              status: newStatus,
+              current_period_end: new Date().toISOString(),
+            })
             .eq('provider_subscription_id', subscriptionId)
             .eq('payment_provider', 'paypal')
         }
       }
+
+      // Downgrade — PayPal sends BILLING.SUBSCRIPTION.UPDATED with new plan_id in resource
+      if (eventType === 'BILLING.SUBSCRIPTION.UPDATED') {
+        const subscriptionId = resource?.id
+        const customId = resource?.custom_id
+        if (subscriptionId && customId) {
+          try {
+            const parsed = JSON.parse(customId) as { user_id: string; plan: string }
+            await supabaseAdmin.from('subscriptions')
+              .update({ plan: parsed.plan, status: 'active' })
+              .eq('provider_subscription_id', subscriptionId)
+              .eq('payment_provider', 'paypal')
+          } catch { /* ignore */ }
+        }
+      }
     }
+
 
     return new Response(JSON.stringify({ received: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
