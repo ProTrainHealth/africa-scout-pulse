@@ -123,16 +123,39 @@ Deno.serve(async (req) => {
         }, { onConflict: 'user_id' })
       }
 
-      if (event === 'subscription.disable') {
+      if (
+        event === 'subscription.disable' ||
+        event === 'subscription.not_renew' ||
+        event === 'invoice.payment_failed'
+      ) {
         const customerCode = data.customer?.customer_code
-        if (customerCode) {
-          await supabaseAdmin.from('subscriptions')
-            .update({ status: 'canceled' })
-            .eq('provider_customer_id', customerCode)
-            .eq('payment_provider', 'paystack')
-        }
+        const subCode = data.subscription_code || data.subscription?.subscription_code
+        const newStatus = event === 'invoice.payment_failed' ? 'past_due' : 'canceled'
+        let q = supabaseAdmin
+          .from('subscriptions')
+          .update({ status: newStatus, current_period_end: new Date().toISOString() })
+          .eq('payment_provider', 'paystack')
+        if (subCode) q = q.eq('provider_subscription_id', subCode)
+        else if (customerCode) q = q.eq('provider_customer_id', customerCode)
+        else return new Response(JSON.stringify({ received: true }), { headers: corsHeaders })
+        await q
       }
-    } else if (provider === 'paypal') {
+
+      // Plan downgrade — Paystack subscription.create on a different plan
+      if (event === 'subscription.create' && data.metadata?.user_id && data.metadata?.plan) {
+        const periodEnd = new Date()
+        periodEnd.setMonth(periodEnd.getMonth() + 1)
+        await supabaseAdmin.from('subscriptions').upsert({
+          user_id: data.metadata.user_id,
+          plan: data.metadata.plan,
+          status: 'active',
+          payment_provider: 'paystack',
+          provider_subscription_id: data.subscription_code || data.id,
+          provider_customer_id: data.customer?.customer_code || null,
+          current_period_end: periodEnd.toISOString(),
+        }, { onConflict: 'user_id' })
+      }
+
       const eventType = body.event_type
       const resource = body.resource
 
