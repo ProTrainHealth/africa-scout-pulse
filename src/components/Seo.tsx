@@ -6,13 +6,13 @@ const DEFAULT_OG = `${SITE}/og-default.jpg`;
 type Props = {
   title: string;
   description: string;
-  path: string;
+  path?: string;
   ogType?: 'website' | 'article';
   ogImage?: string;
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
 };
 
-const Seo = ({ title, description, path, ogType = 'website', ogImage, jsonLd }: Props) => {
+const Seo = ({ title, description, path = '/', ogType = 'website', ogImage, jsonLd }: Props) => {
   const url = `${SITE}${path}`;
   const img = ogImage || DEFAULT_OG;
   const ldArr = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
