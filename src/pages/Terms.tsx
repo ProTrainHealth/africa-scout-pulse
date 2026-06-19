@@ -5,7 +5,9 @@ const Terms = () => (
     <Seo
       title="Terms of Service | Africa Scout Pulse"
       description="Terms governing use of the Africa Scout Pulse intelligence platform."
+      path="/terms"
     />
+
     <h1 className="font-display text-3xl mb-6">Terms of Service</h1>
     <p className="text-sm text-muted-foreground mb-8">Last updated: June 18, 2026</p>
 
