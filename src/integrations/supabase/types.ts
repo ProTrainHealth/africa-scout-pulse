@@ -600,6 +600,57 @@ export type Database = {
           },
         ]
       }
+      security_findings: {
+        Row: {
+          created_at: string
+          description: string | null
+          detected_at: string
+          external_id: string
+          fix_note: string | null
+          id: string
+          metadata: Json
+          pr_url: string | null
+          resolved_at: string | null
+          severity: string
+          source: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          detected_at?: string
+          external_id: string
+          fix_note?: string | null
+          id?: string
+          metadata?: Json
+          pr_url?: string | null
+          resolved_at?: string | null
+          severity: string
+          source: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          detected_at?: string
+          external_id?: string
+          fix_note?: string | null
+          id?: string
+          metadata?: Json
+          pr_url?: string | null
+          resolved_at?: string | null
+          severity?: string
+          source?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       signals: {
         Row: {
           analyst_tag: string
