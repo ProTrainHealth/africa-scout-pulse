@@ -19,6 +19,7 @@ import Pricing from "./pages/Pricing";
 import Checkout from "./pages/Checkout";
 import OrderHistory from "./pages/OrderHistory";
 import WorldMonitor from "./pages/WorldMonitor";
+import Companies from "./pages/Companies";
 import CompanyDetail from "./pages/CompanyDetail";
 import Watchlist from "./pages/Watchlist";
 import Settings from "./pages/Settings";
