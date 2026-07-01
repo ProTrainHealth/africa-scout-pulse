@@ -216,7 +216,7 @@ const Dashboard = () => {
 
         <nav className="flex-1 py-3 px-2 space-y-0.5">
           {SIDEBAR_ITEMS.map((item, idx) => {
-            const active = location.pathname === item.to && idx === 0;
+            const active = location.pathname === item.to;
             return (
               <Link
                 key={`${item.label}-${idx}`}
