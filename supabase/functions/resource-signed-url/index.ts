@@ -28,8 +28,32 @@ Deno.serve(async (req) => {
     }
 
     const { storage_path } = await req.json()
-    if (!storage_path) {
+    if (!storage_path || typeof storage_path !== 'string') {
       return new Response(JSON.stringify({ error: 'Missing storage_path' }), { status: 400, headers: corsHeaders })
+    }
+
+    // Verify active paid subscription (analyst or boardroom) using anon-key client (respects RLS)
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('status,plan,current_period_end')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .in('plan', ['analyst', 'boardroom'])
+      .maybeSingle()
+
+    if (!sub || (sub.current_period_end && new Date(sub.current_period_end) <= new Date())) {
+      return new Response(JSON.stringify({ error: 'Active paid subscription required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // Verify the storage_path corresponds to a real resource row (prevents path enumeration)
+    const { data: resourceRow } = await supabase
+      .from('resources')
+      .select('id')
+      .eq('storage_path', storage_path)
+      .maybeSingle()
+
+    if (!resourceRow) {
+      return new Response(JSON.stringify({ error: 'Resource not found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     // Use service role to create signed URL
@@ -41,6 +65,7 @@ Deno.serve(async (req) => {
     const { data, error } = await adminClient.storage
       .from('resources')
       .createSignedUrl(storage_path, 3600) // 1 hour TTL
+
 
     if (error) {
       console.error('[resource-signed-url] storage error:', error.message)
