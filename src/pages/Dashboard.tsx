@@ -13,7 +13,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/componen
 /* ── Sidebar nav ── */
 const SIDEBAR_ITEMS = [
   { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
-  { label: 'Companies', to: '/dashboard', icon: Building2 },
+  { label: 'Companies', to: '/companies', icon: Building2 },
   { label: 'World Monitor', to: '/world-monitor', icon: Globe },
   { label: 'Watchlist', to: '/watchlist', icon: Star },
   { label: 'Resources', to: '/resources', icon: BookOpen },
