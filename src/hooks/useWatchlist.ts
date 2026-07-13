@@ -23,7 +23,7 @@ export const useWatchlist = () => {
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
-    setItems((data as unknown as WatchlistItem[]) || []);
+    setItems((data as WatchlistItem[]) || []);
     setLoading(false);
   }, [user]);
 
