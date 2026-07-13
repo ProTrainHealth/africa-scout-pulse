@@ -51,7 +51,7 @@ const Settings = () => {
     setSaving(true);
     const { error } = await supabase
       .from('profiles')
-      .update({ display_name: displayName, timezone } as any)
+      .update({ display_name: displayName, timezone })
       .eq('user_id', user.id);
     setSaving(false);
     if (error) {
