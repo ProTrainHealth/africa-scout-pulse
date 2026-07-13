@@ -39,8 +39,8 @@ const Settings = () => {
       .maybeSingle()
       .then(({ data }) => {
         if (data) {
-          setDisplayName((data as any).display_name || '');
-          setTimezone((data as any).timezone || 'UTC');
+          setDisplayName(data.display_name || '');
+          setTimezone(data.timezone || 'UTC');
         }
         setLoading(false);
       });
