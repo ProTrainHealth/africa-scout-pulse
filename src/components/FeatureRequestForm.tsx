@@ -37,7 +37,7 @@ const FeatureRequestForm = () => {
       user_id: user.id,
       title: title.trim(),
       description: description.trim(),
-      priority: priority as any,
+      priority,
     });
 
     if (error) {
