@@ -30,6 +30,7 @@ import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
 import CommandPalette from "./components/CommandPalette";
 import DisclaimerFooter from "./components/DisclaimerFooter";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient({
   defaultOptions: {
