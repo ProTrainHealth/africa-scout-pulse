@@ -30,6 +30,7 @@ import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
 import CommandPalette from "./components/CommandPalette";
 import DisclaimerFooter from "./components/DisclaimerFooter";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,32 +51,34 @@ const App = () => {
       <Sonner />
       <BrowserRouter>
         <CommandPalette />
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/admin/regime" element={<RegimeAdmin />} />
-          <Route path="/admin/signals" element={<SignalsAdmin />} />
-          <Route path="/admin/catalysts" element={<CatalystsAdmin />} />
-          <Route path="/admin/macro" element={<MacroAdmin />} />
-          <Route path="/admin/security" element={<AdminSecurity />} />
-          <Route path="/resources" element={<Resources />} />
-          <Route path="/resources/:id" element={<ResourceDetail />} />
-          <Route path="/pricing" element={<Pricing />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/orders" element={<OrderHistory />} />
-          <Route path="/world-monitor" element={<WorldMonitor />} />
-          <Route path="/companies" element={<Companies />} />
-          <Route path="/company/:id" element={<CompanyDetail />} />
-          <Route path="/watchlist" element={<Watchlist />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/transparency" element={<Transparency />} />
-          <Route path="/briefings" element={<Briefings />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/admin" element={<ErrorBoundary><Admin /></ErrorBoundary>} />
+            <Route path="/admin/regime" element={<ErrorBoundary><RegimeAdmin /></ErrorBoundary>} />
+            <Route path="/admin/signals" element={<ErrorBoundary><SignalsAdmin /></ErrorBoundary>} />
+            <Route path="/admin/catalysts" element={<ErrorBoundary><CatalystsAdmin /></ErrorBoundary>} />
+            <Route path="/admin/macro" element={<ErrorBoundary><MacroAdmin /></ErrorBoundary>} />
+            <Route path="/admin/security" element={<ErrorBoundary><AdminSecurity /></ErrorBoundary>} />
+            <Route path="/resources" element={<ErrorBoundary><Resources /></ErrorBoundary>} />
+            <Route path="/resources/:id" element={<ErrorBoundary><ResourceDetail /></ErrorBoundary>} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/checkout" element={<ErrorBoundary><Checkout /></ErrorBoundary>} />
+            <Route path="/orders" element={<ErrorBoundary><OrderHistory /></ErrorBoundary>} />
+            <Route path="/world-monitor" element={<ErrorBoundary><WorldMonitor /></ErrorBoundary>} />
+            <Route path="/companies" element={<ErrorBoundary><Companies /></ErrorBoundary>} />
+            <Route path="/company/:id" element={<ErrorBoundary><CompanyDetail /></ErrorBoundary>} />
+            <Route path="/watchlist" element={<ErrorBoundary><Watchlist /></ErrorBoundary>} />
+            <Route path="/settings" element={<ErrorBoundary><Settings /></ErrorBoundary>} />
+            <Route path="/transparency" element={<Transparency />} />
+            <Route path="/briefings" element={<ErrorBoundary><Briefings /></ErrorBoundary>} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </ErrorBoundary>
         <DisclaimerFooter />
       </BrowserRouter>
     </TooltipProvider>
