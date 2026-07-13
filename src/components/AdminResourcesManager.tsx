@@ -70,7 +70,7 @@ const AdminResourcesManager = () => {
           file_type: ext,
           file_url: '', // We use storage_path + signed URLs now
           storage_path: storagePath,
-        } as any);
+        });
 
       if (insertErr) throw new Error(insertErr.message);
 
