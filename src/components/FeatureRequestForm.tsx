@@ -87,7 +87,7 @@ const FeatureRequestForm = () => {
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">Priority</label>
-            <Select value={priority} onValueChange={setPriority}>
+            <Select value={priority} onValueChange={(v) => setPriority(v as Priority)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
