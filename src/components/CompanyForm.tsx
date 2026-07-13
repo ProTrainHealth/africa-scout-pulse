@@ -206,7 +206,7 @@ const CompanyForm = ({ open, onOpenChange, company, onSaved }: Props) => {
                   <Label className="text-[10px] font-mono text-accent">{letter}</Label>
                   <Input
                     type="number" min={0} max={100}
-                    value={(form as any)[k]}
+                    value={form[k]}
                     onChange={(e) => set(k, e.target.value)}
                   />
                 </div>

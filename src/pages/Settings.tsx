@@ -39,8 +39,8 @@ const Settings = () => {
       .maybeSingle()
       .then(({ data }) => {
         if (data) {
-          setDisplayName((data as any).display_name || '');
-          setTimezone((data as any).timezone || 'UTC');
+          setDisplayName(data.display_name || '');
+          setTimezone(data.timezone || 'UTC');
         }
         setLoading(false);
       });
@@ -51,7 +51,7 @@ const Settings = () => {
     setSaving(true);
     const { error } = await supabase
       .from('profiles')
-      .update({ display_name: displayName, timezone } as any)
+      .update({ display_name: displayName, timezone })
       .eq('user_id', user.id);
     setSaving(false);
     if (error) {

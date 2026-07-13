@@ -58,7 +58,7 @@ const CatalystFeed = () => {
     setCatalysts(
       data.map((c) => ({
         ...c,
-        signal_type: (c as any).signal_type ?? 'neutral',
+        signal_type: c.signal_type ?? 'neutral',
         company: companyMap.get(c.company_id) ?? { id: c.company_id, name: 'Unknown', country: '', country_code: '' },
       }))
     );

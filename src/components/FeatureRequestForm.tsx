@@ -8,6 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Lightbulb } from 'lucide-react';
+import type { Database } from '@/integrations/supabase/types';
+
+type Priority = Database['public']['Enums']['feature_request_priority'];
 
 const FeatureRequestForm = () => {
   const { user } = useAuth();
@@ -15,7 +18,7 @@ const FeatureRequestForm = () => {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState<string>('medium');
+  const [priority, setPriority] = useState<Priority>('medium');
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,7 +37,7 @@ const FeatureRequestForm = () => {
       user_id: user.id,
       title: title.trim(),
       description: description.trim(),
-      priority: priority as any,
+      priority,
     });
 
     if (error) {
@@ -84,7 +87,7 @@ const FeatureRequestForm = () => {
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">Priority</label>
-            <Select value={priority} onValueChange={setPriority}>
+            <Select value={priority} onValueChange={(v) => setPriority(v as Priority)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

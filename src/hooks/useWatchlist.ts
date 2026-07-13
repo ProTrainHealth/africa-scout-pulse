@@ -23,7 +23,7 @@ export const useWatchlist = () => {
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
-    setItems((data as unknown as WatchlistItem[]) || []);
+    setItems((data as WatchlistItem[]) || []);
     setLoading(false);
   }, [user]);
 
@@ -36,7 +36,7 @@ export const useWatchlist = () => {
     if (!user) throw new Error('Not authenticated');
     const { error } = await supabase
       .from('user_watchlist')
-      .insert({ user_id: user.id, company_id: companyId } as any);
+      .insert({ user_id: user.id, company_id: companyId });
     if (error) throw new Error(error.message);
     await fetchItems();
   };
