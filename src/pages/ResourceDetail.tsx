@@ -41,7 +41,7 @@ const ResourceDetail = () => {
       .eq('id', id)
       .maybeSingle()
       .then(({ data }) => {
-        const r = data as unknown as Resource | null;
+        const r = (data ?? null) as Resource | null;
         setResource(r);
         setLoading(false);
         if (r?.storage_path) {
