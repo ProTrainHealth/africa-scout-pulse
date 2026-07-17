@@ -135,15 +135,16 @@ const WorldMonitor = () => {
       if (cancelled) return;
 
       if (!catResult.error && catResult.data) {
+        type CatRow = { id: string; title: string | null; type: string | null; notes: string | null; event_date: string | null; companies: { name: string | null; country_code: string | null; sector: string | null } | null };
         setCatalysts(
-          (catResult.data as any[]).map((c) => ({
+          (catResult.data as unknown as CatRow[]).map((c) => ({
             id: c.id,
             company_name: c.companies?.name ?? 'Unknown',
             country_code: c.companies?.country_code ?? '',
             event_type: c.title ?? c.type ?? 'Event',
             description: c.notes ?? '',
             catalyst_date: c.event_date ?? '',
-            sector: c.companies?.sector,
+            sector: c.companies?.sector ?? undefined,
           })),
         );
       } else if (catResult.error) {
@@ -151,8 +152,9 @@ const WorldMonitor = () => {
       }
 
       if (!sancResult.error && sancResult.data) {
+        type SancRow = { country: string | null; country_code: string | null; risk_tag: string | null; regime_status: string | null; updated_at: string | null };
         setSanctions(
-          (sancResult.data as any[]).map((s) => ({
+          (sancResult.data as unknown as SancRow[]).map((s) => ({
             country_name: s.country ?? '',
             country_code: s.country_code ?? '',
             risk_tag: s.risk_tag ?? '',
