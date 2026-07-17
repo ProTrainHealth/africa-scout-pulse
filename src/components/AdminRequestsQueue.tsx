@@ -28,7 +28,7 @@ const AdminRequestsQueue = () => {
       .order('created_at', { ascending: false });
 
     if (!error && data) {
-      setRequests(data as unknown as FeatureRequest[]);
+      setRequests((data ?? []) as FeatureRequest[]);
     }
     setLoading(false);
   };
