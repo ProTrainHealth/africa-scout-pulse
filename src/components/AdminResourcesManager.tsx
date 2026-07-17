@@ -38,7 +38,7 @@ const AdminResourcesManager = () => {
       .from('resources')
       .select('*')
       .order('published_at', { ascending: false });
-    setResources((data as unknown as ResourceRow[]) || []);
+    setResources(((data ?? []) as ResourceRow[]));
     setLoading(false);
   };
 
