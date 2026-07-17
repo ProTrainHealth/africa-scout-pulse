@@ -153,18 +153,20 @@ const NativeWorldMap = ({
       } else if (contextRes.error) console.error("country_context:", contextRes.error);
 
       if (!catalystsRes.error && catalystsRes.data) {
-        setCatalystMarkers((catalystsRes.data as any[])
+        type CatRow = { id: string; title: string | null; type: string | null; companies: { name: string | null; latitude: number | null; longitude: number | null } | null };
+        setCatalystMarkers((catalystsRes.data as unknown as CatRow[])
           .filter((c) => c.companies?.latitude != null && c.companies?.longitude != null)
           .map((c) => ({
-            name: `${c.companies.name} — ${c.title ?? c.type ?? "Catalyst"}`,
-            coordinates: [Number(c.companies.longitude), Number(c.companies.latitude)],
+            name: `${c.companies!.name ?? ''} — ${c.title ?? c.type ?? "Catalyst"}`,
+            coordinates: [Number(c.companies!.longitude), Number(c.companies!.latitude)] as [number, number],
             company_id: c.id,
           })));
       } else if (catalystsRes.error) console.error("catalysts:", catalystsRes.error);
 
       if (!heatRes.error && heatRes.data) {
         const lookup: Record<string, number> = {};
-        for (const row of heatRes.data as any[]) {
+        type HeatRow = { country: string | null; country_code: string | null; heat_intensity: number | string | null };
+        for (const row of heatRes.data as unknown as HeatRow[]) {
           const v = Math.max(0, Math.min(100, Number(row.heat_intensity) || 0));
           if (row.country_code) lookup[String(row.country_code).toUpperCase()] = v;
           if (row.country) lookup[String(row.country).toUpperCase()] = v;
