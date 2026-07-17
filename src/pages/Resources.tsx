@@ -47,7 +47,7 @@ const Resources = () => {
       .select('*')
       .order('published_at', { ascending: false })
       .then(({ data }) => {
-        setResources((data as unknown as Resource[]) || []);
+        setResources(((data ?? []) as Resource[]));
         setLoading(false);
       });
   }, [user]);
