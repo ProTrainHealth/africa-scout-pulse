@@ -53,7 +53,8 @@ const CompanyDetail = () => {
       if (cancelled) return;
       if (!cRes.data) { setNotFound(true); setLoading(false); return; }
       setCompany(cRes.data as Company);
-      setHistory(((hRes.data as any[]) ?? []).map(r => ({
+      const hRows = (hRes.data ?? []) as Array<{ score: number; recorded_at: string }>;
+      setHistory(hRows.map(r => ({
         date: new Date(r.recorded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         score: r.score,
       })));

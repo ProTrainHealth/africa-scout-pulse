@@ -40,7 +40,7 @@ export const useSubscription = () => {
         .maybeSingle();
 
       if (!error && data) {
-        setSubscription(data as unknown as Subscription);
+        setSubscription(data as Subscription);
       } else {
         setSubscription(null);
       }

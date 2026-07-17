@@ -33,7 +33,7 @@ const OrderHistory = () => {
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
-      setRecords((data as unknown as SubscriptionRecord[]) || []);
+      setRecords((data ?? []) as SubscriptionRecord[]);
       setLoading(false);
     };
     fetch();
