@@ -138,8 +138,8 @@ const NativeWorldMap = ({
 
       if (!companiesRes.error && companiesRes.data) {
         setTrackedMarkers(companiesRes.data
-          .filter((c: any) => c.latitude != null && c.longitude != null)
-          .map((c: any) => {
+          .filter((c) => c.latitude != null && c.longitude != null)
+          .map((c) => {
             const score = c.scout_score ?? 0;
             const signal: Signal = score >= 70 ? "ACCUMULATE" : score >= 55 ? "HOLD" : "MONITOR";
             return { name: c.name, country: c.country_code ?? "", coordinates: [Number(c.longitude), Number(c.latitude)], score, signal };
@@ -148,8 +148,8 @@ const NativeWorldMap = ({
 
       if (!contextRes.error && contextRes.data) {
         setSanctionsMarkers(contextRes.data
-          .filter((c: any) => c.latitude != null && c.longitude != null)
-          .map((c: any) => ({ name: `${c.country} — ${c.risk_tag}`, coordinates: [Number(c.longitude), Number(c.latitude)] })));
+          .filter((c) => c.latitude != null && c.longitude != null)
+          .map((c) => ({ name: `${c.country} — ${c.risk_tag}`, coordinates: [Number(c.longitude), Number(c.latitude)] })));
       } else if (contextRes.error) console.error("country_context:", contextRes.error);
 
       if (!catalystsRes.error && catalystsRes.data) {

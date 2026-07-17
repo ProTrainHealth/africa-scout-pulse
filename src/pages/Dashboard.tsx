@@ -133,7 +133,7 @@ const Dashboard = () => {
         const avg = companies.reduce((s, c) => s + (c.scout_score ?? 0), 0) / companies.length;
         setAvgScore(Math.round(avg * 10) / 10);
 
-        setLedger(companies.map((c: any, idx: number) => ({
+        setLedger(companies.map((c, idx: number) => ({
           id: c.id,
           company: c.name,
           country: c.country,
@@ -146,7 +146,7 @@ const Dashboard = () => {
         // Pick the closest upcoming catalyst as "top catalyst"
         if (catalysts.length > 0) {
           const nearest = catalysts[0];
-          const comp = companies.find((c: any) => c.id === nearest.company_id);
+          const comp = companies.find((c) => c.id === nearest.company_id);
           setTopCatalyst({
             company: comp?.name ?? 'Unknown',
             type: nearest.title ?? 'Event',
