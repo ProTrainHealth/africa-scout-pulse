@@ -116,7 +116,7 @@ const NativeWorldMap = ({
       .then((r) => r.json())
       .then((topo) => {
         if (cancelled) return;
-        const fc = feature(topo, topo.objects.countries) as any;
+        const fc = feature(topo, topo.objects.countries) as unknown as { features: Array<{ id?: string | number; properties?: { ISO_A2?: string; iso_a2?: string; ISO_A3?: string; iso_a3?: string; name?: string } }> };
         setGeoFeatures(fc.features ?? []);
       })
       .catch((e) => console.error("geo load:", e));
