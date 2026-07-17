@@ -121,8 +121,10 @@ const Dashboard = () => {
 
       if (cancelled) return;
 
-      const companies = (companiesRes.data ?? []) as any[];
-      const catalysts = (catalystsRes.data ?? []) as any[];
+      type CompanyRow = { id: string; name: string; country: string; country_code: string | null; sector: string; scout_score: number | null; institutional_flow: string | null; market_cap: number | null; catalyst_date: string | null; next_catalyst: string | null; description: string | null };
+      type CatalystRow = { id: string; title: string; event_date: string | null; notes: string | null; company_id: string | null };
+      const companies = (companiesRes.data ?? []) as CompanyRow[];
+      const catalysts = (catalystsRes.data ?? []) as CatalystRow[];
 
       setCompanyCount(companies.length);
       setCatalystCount(catalysts.length);
