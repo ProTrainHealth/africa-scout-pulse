@@ -1,7 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Star, Trash2, Loader2, ArrowRight } from 'lucide-react';
-import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useWatchlist } from '@/hooks/useWatchlist';
@@ -70,7 +69,6 @@ const Watchlist = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
       <div className="container mx-auto px-4 pb-12 pt-24">
         <div className="mb-6 flex items-center justify-between">
           <div>

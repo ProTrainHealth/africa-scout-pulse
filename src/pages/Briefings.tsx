@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Mic, Lock, Search, PhoneCall, Video, MessageSquare, Calendar, Filter } from 'lucide-react';
-import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -105,7 +104,6 @@ const Briefings = () => {
   if (authLoading || subLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
         <div className="container mx-auto px-4 pt-24"><Skeleton className="h-7 w-64 mb-4" /><Skeleton className="h-64 w-full" /></div>
       </div>
     );
@@ -114,7 +112,6 @@ const Briefings = () => {
   if (!hasAccess) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
         <div className="container mx-auto flex flex-col items-center justify-center px-4 pt-32 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
             <Lock className="h-8 w-8 text-primary" />
@@ -133,7 +130,6 @@ const Briefings = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
       <main className="container mx-auto px-4 pt-24 pb-12 max-w-4xl">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-border/40 pb-4">
           <div>

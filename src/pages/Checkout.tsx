@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Loader2, AlertCircle, CreditCard } from 'lucide-react';
-import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -77,7 +76,6 @@ const Checkout = () => {
   if (!validPlan) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
         <div className="container mx-auto flex flex-col items-center justify-center px-4 pt-24 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
           <h1 className="font-display text-2xl font-bold">Invalid Plan</h1>
@@ -90,7 +88,6 @@ const Checkout = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
       <div className="container mx-auto px-4 pb-16 pt-24">
         <Button variant="ghost" onClick={() => navigate('/pricing')} className="mb-6">
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Pricing

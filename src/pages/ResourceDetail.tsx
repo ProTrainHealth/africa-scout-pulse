@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Download, Loader2, FileText } from 'lucide-react';
-import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -70,7 +69,6 @@ const ResourceDetail = () => {
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
         <div className="container mx-auto px-4 pt-24">
           <Skeleton className="h-6 w-32 mb-6" />
           <Skeleton className="h-8 w-96 mb-4" />
@@ -84,7 +82,6 @@ const ResourceDetail = () => {
   if (!resource) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
         <div className="container mx-auto flex flex-col items-center justify-center px-4 pt-32 text-center">
           <FileText className="h-12 w-12 text-muted-foreground mb-4" />
           <h1 className="font-display text-2xl font-bold">Resource Not Found</h1>
@@ -112,7 +109,6 @@ const ResourceDetail = () => {
           publisher: { '@type': 'Organization', name: 'Omni-Scout Africa' },
         }}
       />
-      <Navbar />
       <div className="container mx-auto px-4 pb-12 pt-24">
         <Button variant="ghost" onClick={() => navigate('/resources')} className="mb-6">
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Resources

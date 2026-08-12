@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Save, Settings as SettingsIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -64,7 +63,6 @@ const Settings = () => {
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
         <div className="container mx-auto px-4 pb-12 pt-24">
           <Skeleton className="h-8 w-48 mb-8" />
           <div className="mx-auto max-w-lg space-y-6">
@@ -77,7 +75,6 @@ const Settings = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
       <div className="container mx-auto px-4 pb-12 pt-24">
         <h1 className="font-display text-3xl font-bold flex items-center gap-2 mb-8">
           <SettingsIcon className="h-6 w-6 text-primary" />

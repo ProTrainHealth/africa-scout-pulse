@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Eye, BarChart3, Lock, Zap, ArrowRight, Activity, Shield } from 'lucide-react';
 import heroImage from '@/assets/hero-africa.jpg';
-import Navbar from '@/components/Navbar';
 import LiveStatsBar from '@/components/landing/LiveStatsBar';
 import SignalPulse from '@/components/landing/SignalPulse';
 import BoardroomSeats from '@/components/landing/BoardroomSeats';
@@ -61,7 +60,6 @@ const Index = () => {
         description="Scout Scores, catalyst tracking, and institutional flow data on 50 companies critical to Africa's infrastructure by 2050. Radically neutral. Zero positions."
         path="/"
       />
-      <Navbar />
 
       {/* Hero */}
       <section className="relative overflow-hidden pt-14">

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Receipt, Loader2 } from 'lucide-react';
-import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -42,7 +41,6 @@ const OrderHistory = () => {
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
         <div className="flex items-center justify-center pt-48">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -52,7 +50,6 @@ const OrderHistory = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
       <div className="container mx-auto px-4 pb-12 pt-24">
         <div className="mb-8 flex items-center gap-3">
           <Receipt className="h-6 w-6 text-primary" />
