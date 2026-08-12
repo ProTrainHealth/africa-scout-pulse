@@ -31,6 +31,10 @@ import NotFound from "./pages/NotFound";
 import CommandPalette from "./components/CommandPalette";
 import DisclaimerFooter from "./components/DisclaimerFooter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import PublicLayout from "./components/layouts/PublicLayout";
+import DashboardLayout from "./components/layouts/DashboardLayout";
+import ProtectedRoute from "./components/layouts/ProtectedRoute";
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
