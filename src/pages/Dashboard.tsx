@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Calendar, Gauge, LineChart, Radio,
 } from 'lucide-react';
@@ -78,6 +78,7 @@ const Dashboard = () => {
   // Live data
   const [ledger, setLedger] = useState<LedgerRow[]>([]);
   const [topCatalyst, setTopCatalyst] = useState<CatalystRow | null>(null);
+  const navigate = useNavigate();
   const [companyCount, setCompanyCount] = useState(0);
   const [catalystCount, setCatalystCount] = useState(0);
   const [avgScore, setAvgScore] = useState(0);
