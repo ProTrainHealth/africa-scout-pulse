@@ -41,11 +41,6 @@ const signalClass = (sig: Signal) =>
     ? 'bg-primary/15 text-primary border-primary/30'
     : 'bg-muted text-muted-foreground border-border';
 
-const tierLabel = (plan: string | null) => {
-  if (plan === 'analyst') return 'ANALYST';
-  if (plan === 'boardroom') return 'BOARDROOM';
-  return 'OBSERVER';
-};
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -77,11 +72,8 @@ const DashSkeleton = () => (
 );
 
 const Dashboard = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { user, loading: authLoading, signOut } = useAuth();
-  const { plan, loading: subLoading } = useSubscription();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { user, loading: authLoading } = useAuth();
+  const { loading: subLoading } = useSubscription();
 
   // Live data
   const [ledger, setLedger] = useState<LedgerRow[]>([]);
@@ -91,13 +83,6 @@ const Dashboard = () => {
   const [avgScore, setAvgScore] = useState(0);
   const [loadingData, setLoadingData] = useState(true);
 
-  // Auth gate
-  useEffect(() => {
-    if (!authLoading && !user) {
-      sessionStorage.setItem('return_to', '/dashboard');
-      navigate('/auth', { replace: true });
-    }
-  }, [authLoading, user, navigate]);
 
   // Fetch live data
   useEffect(() => {
