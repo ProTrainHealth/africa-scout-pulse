@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
-  LayoutDashboard, Building2, Globe, Star, BookOpen, Settings2,
-  LogOut, Menu, Activity, Calendar, Gauge, LineChart, Radio,
+  LayoutDashboard, Calendar, Gauge, LineChart, Radio,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -10,15 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 
-/* ── Sidebar nav ── */
-const SIDEBAR_ITEMS = [
-  { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
-  { label: 'Companies', to: '/companies', icon: Building2 },
-  { label: 'World Monitor', to: '/world-monitor', icon: Globe },
-  { label: 'Watchlist', to: '/watchlist', icon: Star },
-  { label: 'Resources', to: '/resources', icon: BookOpen },
-  { label: 'Settings', to: '/settings', icon: Settings2 },
-];
+
 
 /* ── Types ── */
 type Signal = 'ACCUMULATE' | 'HOLD' | 'MONITOR';
