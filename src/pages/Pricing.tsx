@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, BarChart3, Lock, Zap } from 'lucide-react';
-import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useToast } from '@/hooks/use-toast';
@@ -103,7 +102,6 @@ const Pricing = () => {
         description="Choose your intel level. Free Observer tier, $139/mo Analyst dashboard, or limited 50-seat Boardroom access to private signal room and analyst calls."
         path="/pricing"
       />
-      <Navbar />
       <div className="container mx-auto px-4 pb-16 pt-24">
         <div className="mx-auto mb-8 max-w-lg text-center">
           <h1 className="font-display text-3xl font-bold">Choose Your Intel Level</h1>

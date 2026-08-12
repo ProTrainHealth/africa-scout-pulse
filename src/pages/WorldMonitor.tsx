@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Globe, Lock, ShieldAlert, Activity, Zap, X, ArrowLeftRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import Navbar from '@/components/Navbar';
 import Seo from '@/components/Seo';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -224,7 +223,6 @@ const WorldMonitor = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
         <div className="container mx-auto px-4 pt-24">
           <Skeleton className="h-7 w-64 mb-2" />
           <Skeleton className="h-4 w-96 mb-4" />
@@ -237,7 +235,6 @@ const WorldMonitor = () => {
   if (!hasAccess) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
         <div className="container mx-auto flex flex-col items-center justify-center px-4 pt-32 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
             <Lock className="h-8 w-8 text-primary" />
@@ -267,7 +264,6 @@ const WorldMonitor = () => {
         description="Interactive intelligence map of Africa: catalysts, sanctions exposure, and composite country risk overlays for subscribers."
         path="/world-monitor"
       />
-      <Navbar />
       <div className="container mx-auto px-4 pt-24 pb-12">
         {/* Header */}
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-border/40 pb-4">

@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
-import Navbar from '@/components/Navbar';
 import Seo from '@/components/Seo';
 
 const ROWS = [
@@ -19,7 +18,6 @@ const Transparency = () => {
         description="See exactly how every Omni-Scout Africa Scout Score is built: Governance, Liquidity, Infrastructure, Regulatory, and Catalyst weights — fully disclosed."
         path="/transparency"
       />
-      <Navbar />
       <main className="container mx-auto max-w-4xl px-4 pt-24 pb-16">
         <Link to="/" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-3 w-3" /> Back

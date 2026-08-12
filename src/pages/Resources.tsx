@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { BookOpen, FileText, TrendingUp, Users, Download, ExternalLink, Loader2 } from 'lucide-react';
-import Navbar from '@/components/Navbar';
 import Seo from '@/components/Seo';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -81,7 +80,6 @@ const Resources = () => {
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
         <div className="container mx-auto px-4 pb-12 pt-24">
           <Skeleton className="h-8 w-48 mb-2" />
           <Skeleton className="h-4 w-72 mb-8" />
@@ -115,7 +113,6 @@ const Resources = () => {
         description="Editorial intelligence library: weekly deep-dive reports, sector theses, and narrative analysis on Africa's infrastructure economy."
         path="/resources"
       />
-      <Navbar />
       <div className="container mx-auto px-4 pb-12 pt-24">
         <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
           <div>
