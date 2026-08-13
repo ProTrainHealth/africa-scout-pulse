@@ -46,7 +46,7 @@ const Portfolio = () => {
   const positionsQuery = useQuery({
     queryKey: ['phantom-portfolio'],
     queryFn: async () => {
-      const { data, error } = await withRetry(() =>
+      const { data, error } = await withRetry(async () =>
         supabase
           .from('phantom_portfolio')
           .select('id, company_id, entry_price, current_price, entry_date, weight, companies(name, sector, country_code)')
