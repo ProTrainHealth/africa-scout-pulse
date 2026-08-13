@@ -24,6 +24,7 @@ import CompanyDetail from "./pages/CompanyDetail";
 import Watchlist from "./pages/Watchlist";
 import Settings from "./pages/Settings";
 import Transparency from "./pages/Transparency";
+import Portfolio from "./pages/Portfolio";
 import Briefings from "./pages/Briefings";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
@@ -76,7 +77,7 @@ const App = () => {
                 <Route path="/companies" element={<ErrorBoundary><Companies /></ErrorBoundary>} />
                 <Route path="/company/:id" element={<ErrorBoundary><CompanyDetail /></ErrorBoundary>} />
                 <Route path="/watchlist" element={<ErrorBoundary><Watchlist /></ErrorBoundary>} />
-                <Route path="/portfolio" element={<ErrorBoundary><Transparency /></ErrorBoundary>} />
+                <Route path="/portfolio" element={<ErrorBoundary><Portfolio /></ErrorBoundary>} />
                 <Route path="/boardroom" element={<ErrorBoundary><Briefings /></ErrorBoundary>} />
                 <Route path="/briefings" element={<ErrorBoundary><Briefings /></ErrorBoundary>} />
                 <Route path="/resources" element={<ErrorBoundary><Resources /></ErrorBoundary>} />
