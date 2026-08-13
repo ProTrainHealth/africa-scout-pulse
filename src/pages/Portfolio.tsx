@@ -187,7 +187,7 @@ const Portfolio = () => {
       {positionsQuery.isLoading ? (
         <LoadingState label="Loading portfolio…" />
       ) : positionsQuery.isError ? (
-        <ErrorState message="Portfolio data is unavailable right now." onRetry={() => positionsQuery.refetch()} />
+        <ErrorState error="Portfolio data is unavailable right now." onRetry={() => { void positionsQuery.refetch(); }} />
       ) : positions.length === 0 ? (
         <div className="rounded-xl border border-border/60 bg-card/40 p-10 text-center text-sm text-muted-foreground">
           No positions recorded. Not available.
