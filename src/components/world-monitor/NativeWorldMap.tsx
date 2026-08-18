@@ -340,23 +340,25 @@ const NativeWorldMap = ({
           onMouseUp={onMouseUp}
           onMouseLeave={onMouseUp}
         >
-          <g transform={transform}>
+          <g transform={transform} style={{ transition: "transform 700ms cubic-bezier(0.22, 1, 0.36, 1)" }}>
             {geoFeatures.map((geo, idx) => {
               const numericId = String(geo.id).padStart(3, "0");
               const iso3 = NUMERIC_TO_ISO3[numericId];
               const isAfrica = iso3 ? africaSet.has(iso3) : false;
               const isSelected = iso3 && iso3 === selectedCountry;
+              const isFocused = iso3 && iso3 === focusCountry;
               const geoName: string = geo.properties?.name ?? "";
               const heat = isAfrica
-                ? (heatByCode[iso3 ?? ""] ?? heatByCode[geoName.toUpperCase()] ?? 0)
+                ? (heatByCode[iso3 ? (ISO3_TO_ISO2[iso3] ?? iso3) : ""] ?? heatByCode[iso3 ?? ""] ?? heatByCode[geoName.toUpperCase()] ?? 0)
                 : 0;
+              const info = isAfrica ? infoForIso3(iso3, geoName) : null;
               const heatFill =
-                heat >= 70 ? `hsl(0 72% 51% / ${0.25 + (heat - 70) * 0.012})`
-                : heat >= 40 ? `hsl(38 100% 50% / ${0.15 + (heat - 40) * 0.008})`
-                : heat > 0   ? `hsl(155 55% 42% / ${0.1 + heat * 0.004})`
+                heat >= 70 ? `hsl(var(--destructive) / ${0.25 + (heat - 70) * 0.012})`
+                : heat >= 40 ? `hsl(var(--primary) / ${0.15 + (heat - 40) * 0.008})`
+                : heat > 0   ? `hsl(var(--score-high, 155 55% 42%) / ${0.1 + heat * 0.004})`
                 : null;
               const baseFill = isSelected
-                ? "hsl(38 100% 50% / 0.2)"
+                ? "hsl(var(--primary) / 0.2)"
                 : heatFill ?? (isAfrica ? "hsl(220 15% 14%)" : "hsl(220 15% 8%)");
               const d = pathGen(geo) ?? "";
               return (
@@ -364,8 +366,13 @@ const NativeWorldMap = ({
                   key={idx}
                   d={d}
                   fill={baseFill}
-                  stroke={isAfrica ? "hsl(38 100% 50% / 0.3)" : "hsl(220 12% 16%)"}
-                  strokeWidth={isAfrica ? 0.5 / zoom : 0.3 / zoom}
+                  className={heat >= 70 ? "heat-pulse" : undefined}
+                  stroke={
+                    isFocused ? "hsl(var(--primary))"
+                    : isAfrica ? "hsl(38 100% 50% / 0.3)"
+                    : "hsl(220 12% 16%)"
+                  }
+                  strokeWidth={isFocused ? 1.4 / zoom : isAfrica ? 0.5 / zoom : 0.3 / zoom}
                   style={{ cursor: isAfrica ? "pointer" : "default", outline: "none" }}
                   onClick={() => {
                     if (isAfrica && iso3) {
@@ -374,10 +381,14 @@ const NativeWorldMap = ({
                     }
                   }}
                   onMouseEnter={(e) => {
-                    if (isAfrica) (e.currentTarget as SVGPathElement).setAttribute("fill", "hsl(38 100% 50% / 0.15)");
+                    if (!isAfrica) return;
+                    (e.currentTarget as SVGPathElement).setAttribute("fill", "hsl(38 100% 50% / 0.15)");
+                    if (info) handleCountryEnter(e, info);
                   }}
+                  onMouseMove={(e) => { if (info) handleCountryEnter(e, info); }}
                   onMouseLeave={(e) => {
                     (e.currentTarget as SVGPathElement).setAttribute("fill", baseFill);
+                    setHoveredCountry(null);
                   }}
                 />
               );
