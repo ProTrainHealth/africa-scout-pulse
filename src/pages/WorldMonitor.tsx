@@ -79,6 +79,10 @@ const ISO3_TO_ISO2: Record<string, string> = {
   CPV: 'CV', COM: 'KM', STP: 'ST',
 };
 
+const ISO2_TO_ISO3: Record<string, string> = Object.fromEntries(
+  Object.entries(ISO3_TO_ISO2).map(([iso3, iso2]) => [iso2, iso3]),
+);
+
 const Dot = ({ color }: { color: string }) => (
   <svg width="8" height="8" viewBox="0 0 8 8" className="shrink-0">
     <circle cx="4" cy="4" r="3" fill={color} />
@@ -110,6 +114,8 @@ const WorldMonitor = () => {
   const [compareA, setCompareA] = useState<string | null>(null);
   const [compareB, setCompareB] = useState<string | null>(null);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [topRisk, setTopRisk] = useState<RiskCountry[]>([]);
+  const [focusIso3, setFocusIso3] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = 'World Monitor — Omni-Scout Africa';
@@ -123,7 +129,7 @@ const WorldMonitor = () => {
 
     let cancelled = false;
     const fetchPanelData = async () => {
-      const [catResult, sancResult, macroResult] = await Promise.all([
+      const [catResult, sancResult, macroResult, riskResult] = await Promise.all([
         supabase
           .from('catalysts')
           .select(
@@ -142,7 +148,27 @@ const WorldMonitor = () => {
           .from('macro_indicators')
           .select('indicator, current_value, trend, unit, source, updated_at')
           .order('indicator'),
+        supabase
+          .from('country_context')
+          .select('country, country_code, flag_emoji, risk_tag, heat_intensity')
+          .order('heat_intensity', { ascending: false })
+          .limit(5),
       ]);
+
+      if (!cancelled && !riskResult.error && riskResult.data) {
+        type RiskRow = { country: string | null; country_code: string | null; flag_emoji: string | null; risk_tag: string | null; heat_intensity: number | null };
+        setTopRisk(
+          (riskResult.data as RiskRow[]).map((r) => ({
+            country: r.country ?? '',
+            country_code: r.country_code ?? '',
+            flag_emoji: r.flag_emoji ?? '',
+            risk_tag: r.risk_tag ?? '',
+            heat_intensity: Number(r.heat_intensity ?? 0),
+          })),
+        );
+      } else if (riskResult.error) {
+        console.error('top risk fetch:', riskResult.error);
+      }
 
       if (cancelled) return;
 
