@@ -1,14 +1,27 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Globe, Lock, ShieldAlert, Activity, Zap, X, ArrowLeftRight } from 'lucide-react';
+import { Globe, Lock, ShieldAlert, Activity, Zap, X, ArrowLeftRight, Flame } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Seo from '@/components/Seo';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/components/ui/resizable';
 import NativeWorldMap from '@/components/world-monitor/NativeWorldMap';
 import CountryCompareDrawer from '@/components/CountryCompareDrawer';
 import { supabase } from '@/integrations/supabase/client';
+
+interface RiskCountry {
+  country: string;
+  country_code: string;
+  flag_emoji: string;
+  risk_tag: string;
+  heat_intensity: number;
+}
 
 interface CatalystItem {
   id: string;
