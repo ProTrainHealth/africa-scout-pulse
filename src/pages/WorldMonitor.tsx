@@ -1,14 +1,27 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Globe, Lock, ShieldAlert, Activity, Zap, X, ArrowLeftRight } from 'lucide-react';
+import { Globe, Lock, ShieldAlert, Activity, Zap, X, ArrowLeftRight, Flame } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Seo from '@/components/Seo';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/components/ui/resizable';
 import NativeWorldMap from '@/components/world-monitor/NativeWorldMap';
 import CountryCompareDrawer from '@/components/CountryCompareDrawer';
 import { supabase } from '@/integrations/supabase/client';
+
+interface RiskCountry {
+  country: string;
+  country_code: string;
+  flag_emoji: string;
+  risk_tag: string;
+  heat_intensity: number;
+}
 
 interface CatalystItem {
   id: string;
@@ -66,6 +79,10 @@ const ISO3_TO_ISO2: Record<string, string> = {
   CPV: 'CV', COM: 'KM', STP: 'ST',
 };
 
+const ISO2_TO_ISO3: Record<string, string> = Object.fromEntries(
+  Object.entries(ISO3_TO_ISO2).map(([iso3, iso2]) => [iso2, iso3]),
+);
+
 const Dot = ({ color }: { color: string }) => (
   <svg width="8" height="8" viewBox="0 0 8 8" className="shrink-0">
     <circle cx="4" cy="4" r="3" fill={color} />
@@ -97,6 +114,8 @@ const WorldMonitor = () => {
   const [compareA, setCompareA] = useState<string | null>(null);
   const [compareB, setCompareB] = useState<string | null>(null);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [topRisk, setTopRisk] = useState<RiskCountry[]>([]);
+  const [focusIso3, setFocusIso3] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = 'World Monitor — Omni-Scout Africa';
@@ -110,7 +129,7 @@ const WorldMonitor = () => {
 
     let cancelled = false;
     const fetchPanelData = async () => {
-      const [catResult, sancResult, macroResult] = await Promise.all([
+      const [catResult, sancResult, macroResult, riskResult] = await Promise.all([
         supabase
           .from('catalysts')
           .select(
@@ -129,7 +148,27 @@ const WorldMonitor = () => {
           .from('macro_indicators')
           .select('indicator, current_value, trend, unit, source, updated_at')
           .order('indicator'),
+        supabase
+          .from('country_context')
+          .select('country, country_code, flag_emoji, risk_tag, heat_intensity')
+          .order('heat_intensity', { ascending: false })
+          .limit(5),
       ]);
+
+      if (!cancelled && !riskResult.error && riskResult.data) {
+        type RiskRow = { country: string | null; country_code: string | null; flag_emoji: string | null; risk_tag: string | null; heat_intensity: number | null };
+        setTopRisk(
+          (riskResult.data as RiskRow[]).map((r) => ({
+            country: r.country ?? '',
+            country_code: r.country_code ?? '',
+            flag_emoji: r.flag_emoji ?? '',
+            risk_tag: r.risk_tag ?? '',
+            heat_intensity: Number(r.heat_intensity ?? 0),
+          })),
+        );
+      } else if (riskResult.error) {
+        console.error('top risk fetch:', riskResult.error);
+      }
 
       if (cancelled) return;
 
@@ -320,12 +359,67 @@ const WorldMonitor = () => {
 
         {/* Map */}
         <div className="glass-card glow-brand rounded-2xl overflow-hidden p-4">
-          <NativeWorldMap
-            showControls={true}
-            height={520}
-            onCountryClick={handleCountryClick}
-            selectedCountryCode={selectedIso2}
-          />
+          <ResizablePanelGroup direction="horizontal" className="min-h-[520px] rounded-xl">
+            <ResizablePanel defaultSize={24} minSize={16} maxSize={40} className="hidden md:block">
+              <div className="h-full rounded-xl border border-border/40 bg-card/40 p-3">
+                <div className="flex items-center gap-2 border-b border-border/40 pb-2">
+                  <Flame className="h-3.5 w-3.5 text-primary" />
+                  <h2 className="font-mono text-[11px] font-bold uppercase tracking-wider text-primary">
+                    Top Risk Heat
+                  </h2>
+                </div>
+                <div className="mt-2 space-y-1.5">
+                  {topRisk.length === 0 && (
+                    <p className="py-4 text-xs text-muted-foreground">Not available</p>
+                  )}
+                  {topRisk.map((c) => {
+                    const iso3 = ISO2_TO_ISO3[(c.country_code ?? '').toUpperCase()];
+                    const active = focusIso3 && iso3 === focusIso3;
+                    return (
+                      <button
+                        key={c.country}
+                        onClick={() => iso3 && setFocusIso3(iso3 === focusIso3 ? null : iso3)}
+                        className={`w-full rounded-lg border px-2.5 py-2 text-left transition-colors ${
+                          active
+                            ? 'border-primary/50 bg-primary/10'
+                            : 'border-border/30 bg-secondary/30 hover:border-primary/30'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate text-xs font-medium">
+                            {c.flag_emoji} {c.country}
+                          </span>
+                          <span className="font-mono text-[10px] text-muted-foreground">
+                            {c.heat_intensity}
+                          </span>
+                        </div>
+                        <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-secondary">
+                          <div
+                            className="h-full rounded-full bg-primary"
+                            style={{ width: `${Math.min(100, Math.max(0, c.heat_intensity))}%` }}
+                          />
+                        </div>
+                        <span className="mt-1 block truncate font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                          {c.risk_tag}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </ResizablePanel>
+            <ResizableHandle withHandle className="mx-2 hidden md:flex" />
+            <ResizablePanel defaultSize={76} minSize={50}>
+              <NativeWorldMap
+                showControls={true}
+                height={520}
+                onCountryClick={handleCountryClick}
+                selectedCountryCode={selectedIso2}
+                focusCountry={focusIso3}
+              />
+            </ResizablePanel>
+          </ResizablePanelGroup>
+
 
           {/* Legend */}
           <div className="mt-4 flex flex-wrap items-center gap-6 border-t border-border/40 pt-3 text-xs">

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { geoMercator, geoPath } from "d3-geo";
+import { geoMercator, geoPath, geoCentroid } from "d3-geo";
 import { feature } from "topojson-client";
 import { Building2, ShieldAlert, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,12 +57,32 @@ const SIGNAL_COLOR: Record<Signal, string> = {
 
 const VIEW_W = 800;
 
+const ISO3_TO_ISO2: Record<string, string> = {
+  ZAF:"ZA",NGA:"NG",KEN:"KE",EGY:"EG",MAR:"MA",GHA:"GH",ETH:"ET",TZA:"TZ",
+  RWA:"RW",CIV:"CI",ZMB:"ZM",AGO:"AO",MOZ:"MZ",SEN:"SN",BWA:"BW",DZA:"DZ",
+  TUN:"TN",LBY:"LY",SDN:"SD",UGA:"UG",CMR:"CM",COD:"CD",COG:"CG",NAM:"NA",
+  ZWE:"ZW",MWI:"MW",MDG:"MG",MUS:"MU",BEN:"BJ",BFA:"BF",MLI:"ML",NER:"NE",
+  GIN:"GN",SLE:"SL",LBR:"LR",TGO:"TG",GMB:"GM",GAB:"GA",GNQ:"GQ",CAF:"CF",
+  TCD:"TD",SOM:"SO",SSD:"SS",ERI:"ER",DJI:"DJ",BDI:"BI",LSO:"LS",SWZ:"SZ",
+  MRT:"MR",GNB:"GW",CPV:"CV",COM:"KM",STP:"ST",
+};
+
+interface CountryInfo {
+  country: string;
+  flag_emoji: string;
+  regime_status: string;
+  risk_tag: string;
+  heat: number;
+}
+
 interface NativeWorldMapProps {
   height?: number;
   showControls?: boolean;
   className?: string;
   onCountryClick?: (iso3: string) => void;
   selectedCountryCode?: string | null;
+  /** ISO3 code to smoothly center the projection on */
+  focusCountry?: string | null;
 }
 
 interface HoveredMarker {
@@ -73,21 +93,29 @@ interface HoveredMarker {
   y: number;
 }
 
+interface HoveredCountry extends CountryInfo {
+  x: number;
+  y: number;
+}
+
 const NativeWorldMap = ({
   height = 480,
   showControls = true,
   className = "",
   onCountryClick,
   selectedCountryCode = null,
+  focusCountry = null,
 }: NativeWorldMapProps) => {
   const [layers, setLayers] = useState({ companies: true, sanctions: true, catalysts: true });
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [hoveredMarker, setHoveredMarker] = useState<HoveredMarker | null>(null);
+  const [hoveredCountry, setHoveredCountry] = useState<HoveredCountry | null>(null);
 
   const [trackedMarkers, setTrackedMarkers] = useState<TrackedMarker[]>([]);
   const [sanctionsMarkers, setSanctionsMarkers] = useState<SanctionsMarker[]>([]);
   const [catalystMarkers, setCatalystMarkers] = useState<CatalystMarker[]>([]);
   const [heatByCode, setHeatByCode] = useState<Record<string, number>>({});
+  const [infoByKey, setInfoByKey] = useState<Record<string, CountryInfo>>({});
   const [mapDataLoading, setMapDataLoading] = useState(true);
 
   const [geoFeatures, setGeoFeatures] = useState<any[]>([]);
@@ -132,7 +160,7 @@ const NativeWorldMap = ({
         supabase.from("country_context").select("country, country_code, risk_tag, latitude, longitude")
           .or("risk_tag.ilike.%sanction%,risk_tag.ilike.%alert%,risk_tag.ilike.%restricted%,risk_tag.ilike.%elevated%"),
         supabase.from("catalysts").select("id, title, type, company_id, companies:company_id ( name, latitude, longitude )").limit(20),
-        supabase.from("country_context").select("country, country_code, heat_intensity"),
+        supabase.from("country_context").select("country, country_code, heat_intensity, regime_status, risk_tag, flag_emoji"),
       ]);
       if (cancelled) return;
 
@@ -165,13 +193,31 @@ const NativeWorldMap = ({
 
       if (!heatRes.error && heatRes.data) {
         const lookup: Record<string, number> = {};
-        type HeatRow = { country: string | null; country_code: string | null; heat_intensity: number | string | null };
+        const infoLookup: Record<string, CountryInfo> = {};
+        type HeatRow = {
+          country: string | null; country_code: string | null; heat_intensity: number | string | null;
+          regime_status: string | null; risk_tag: string | null; flag_emoji: string | null;
+        };
         for (const row of heatRes.data as unknown as HeatRow[]) {
           const v = Math.max(0, Math.min(100, Number(row.heat_intensity) || 0));
-          if (row.country_code) lookup[String(row.country_code).toUpperCase()] = v;
-          if (row.country) lookup[String(row.country).toUpperCase()] = v;
+          const info: CountryInfo = {
+            country: row.country ?? "",
+            flag_emoji: row.flag_emoji ?? "",
+            regime_status: row.regime_status ?? "",
+            risk_tag: row.risk_tag ?? "",
+            heat: v,
+          };
+          if (row.country_code) {
+            lookup[String(row.country_code).toUpperCase()] = v;
+            infoLookup[String(row.country_code).toUpperCase()] = info;
+          }
+          if (row.country) {
+            lookup[String(row.country).toUpperCase()] = v;
+            infoLookup[String(row.country).toUpperCase()] = info;
+          }
         }
         setHeatByCode(lookup);
+        setInfoByKey(infoLookup);
       } else if (heatRes.error) console.error("heat:", heatRes.error);
 
       setMapDataLoading(false);
@@ -183,12 +229,50 @@ const NativeWorldMap = ({
   const toggleLayer = (key: keyof typeof layers) =>
     setLayers((s) => ({ ...s, [key]: !s[key] }));
 
+  const infoForIso3 = (iso3: string | undefined, geoName: string): CountryInfo | null => {
+    if (!iso3 && !geoName) return null;
+    const iso2 = iso3 ? ISO3_TO_ISO2[iso3] : undefined;
+    return (
+      (iso2 ? infoByKey[iso2] : undefined) ??
+      (iso3 ? infoByKey[iso3] : undefined) ??
+      infoByKey[geoName.toUpperCase()] ??
+      null
+    );
+  };
+
+  // Smoothly recenter on a focused country (ISO3)
+  useEffect(() => {
+    if (!focusCountry || geoFeatures.length === 0) return;
+    const target = geoFeatures.find(
+      (g) => NUMERIC_TO_ISO3[String(g.id).padStart(3, "0")] === focusCountry,
+    );
+    if (!target) return;
+    const centroid = geoCentroid(target as never) as [number, number];
+    const p = projection(centroid);
+    if (!p) return;
+    const nextZoom = 2.6;
+    setZoom(nextZoom);
+    setPan({
+      x: -nextZoom * (p[0] - VIEW_W / 2),
+      y: -nextZoom * (p[1] - height / 2),
+    });
+  }, [focusCountry, geoFeatures, projection, height]);
+
   const handleMarkerEnter = (e: React.MouseEvent, m: TrackedMarker) => {
     const rect = containerRef.current?.getBoundingClientRect();
     setHoveredMarker({
       name: m.name, score: m.score, signal: m.signal,
       x: e.clientX - (rect?.left ?? 0) + 12,
       y: e.clientY - (rect?.top ?? 0) + 12,
+    });
+  };
+
+  const handleCountryEnter = (e: React.MouseEvent, info: CountryInfo) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    setHoveredCountry({
+      ...info,
+      x: e.clientX - (rect?.left ?? 0) + 14,
+      y: e.clientY - (rect?.top ?? 0) + 14,
     });
   };
 
@@ -256,23 +340,25 @@ const NativeWorldMap = ({
           onMouseUp={onMouseUp}
           onMouseLeave={onMouseUp}
         >
-          <g transform={transform}>
+          <g transform={transform} style={{ transition: "transform 700ms cubic-bezier(0.22, 1, 0.36, 1)" }}>
             {geoFeatures.map((geo, idx) => {
               const numericId = String(geo.id).padStart(3, "0");
               const iso3 = NUMERIC_TO_ISO3[numericId];
               const isAfrica = iso3 ? africaSet.has(iso3) : false;
               const isSelected = iso3 && iso3 === selectedCountry;
+              const isFocused = iso3 && iso3 === focusCountry;
               const geoName: string = geo.properties?.name ?? "";
               const heat = isAfrica
-                ? (heatByCode[iso3 ?? ""] ?? heatByCode[geoName.toUpperCase()] ?? 0)
+                ? (heatByCode[iso3 ? (ISO3_TO_ISO2[iso3] ?? iso3) : ""] ?? heatByCode[iso3 ?? ""] ?? heatByCode[geoName.toUpperCase()] ?? 0)
                 : 0;
+              const info = isAfrica ? infoForIso3(iso3, geoName) : null;
               const heatFill =
-                heat >= 70 ? `hsl(0 72% 51% / ${0.25 + (heat - 70) * 0.012})`
-                : heat >= 40 ? `hsl(38 100% 50% / ${0.15 + (heat - 40) * 0.008})`
-                : heat > 0   ? `hsl(155 55% 42% / ${0.1 + heat * 0.004})`
+                heat >= 70 ? `hsl(var(--destructive) / ${0.25 + (heat - 70) * 0.012})`
+                : heat >= 40 ? `hsl(var(--primary) / ${0.15 + (heat - 40) * 0.008})`
+                : heat > 0   ? `hsl(var(--score-high, 155 55% 42%) / ${0.1 + heat * 0.004})`
                 : null;
               const baseFill = isSelected
-                ? "hsl(38 100% 50% / 0.2)"
+                ? "hsl(var(--primary) / 0.2)"
                 : heatFill ?? (isAfrica ? "hsl(220 15% 14%)" : "hsl(220 15% 8%)");
               const d = pathGen(geo) ?? "";
               return (
@@ -280,8 +366,13 @@ const NativeWorldMap = ({
                   key={idx}
                   d={d}
                   fill={baseFill}
-                  stroke={isAfrica ? "hsl(38 100% 50% / 0.3)" : "hsl(220 12% 16%)"}
-                  strokeWidth={isAfrica ? 0.5 / zoom : 0.3 / zoom}
+                  className={heat >= 70 ? "heat-pulse" : undefined}
+                  stroke={
+                    isFocused ? "hsl(var(--primary))"
+                    : isAfrica ? "hsl(38 100% 50% / 0.3)"
+                    : "hsl(220 12% 16%)"
+                  }
+                  strokeWidth={isFocused ? 1.4 / zoom : isAfrica ? 0.5 / zoom : 0.3 / zoom}
                   style={{ cursor: isAfrica ? "pointer" : "default", outline: "none" }}
                   onClick={() => {
                     if (isAfrica && iso3) {
@@ -290,10 +381,14 @@ const NativeWorldMap = ({
                     }
                   }}
                   onMouseEnter={(e) => {
-                    if (isAfrica) (e.currentTarget as SVGPathElement).setAttribute("fill", "hsl(38 100% 50% / 0.15)");
+                    if (!isAfrica) return;
+                    (e.currentTarget as SVGPathElement).setAttribute("fill", "hsl(38 100% 50% / 0.15)");
+                    if (info) handleCountryEnter(e, info);
                   }}
+                  onMouseMove={(e) => { if (info) handleCountryEnter(e, info); }}
                   onMouseLeave={(e) => {
                     (e.currentTarget as SVGPathElement).setAttribute("fill", baseFill);
+                    setHoveredCountry(null);
                   }}
                 />
               );
@@ -370,6 +465,43 @@ const NativeWorldMap = ({
             >
               {hoveredMarker.signal}
             </span>
+          </div>
+        )}
+
+        {hoveredCountry && !hoveredMarker && (
+          <div
+            className="glass-card pointer-events-none absolute z-10 min-w-[210px] max-w-[260px] rounded-lg border border-primary/30 p-3 backdrop-blur-md animate-fade-in-up"
+            style={{ left: hoveredCountry.x, top: hoveredCountry.y }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg leading-none">{hoveredCountry.flag_emoji}</span>
+              <span className="font-display text-sm font-bold">{hoveredCountry.country}</span>
+            </div>
+            {hoveredCountry.regime_status && (
+              <div className="mt-2 text-[11px] text-muted-foreground">
+                Regime: <span className="text-foreground">{hoveredCountry.regime_status}</span>
+              </div>
+            )}
+            {hoveredCountry.risk_tag && (
+              <span className="mt-2 inline-block rounded bg-primary/15 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-primary">
+                {hoveredCountry.risk_tag}
+              </span>
+            )}
+            <div className="mt-2 flex items-center gap-2">
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${hoveredCountry.heat}%`,
+                    backgroundColor:
+                      hoveredCountry.heat >= 70 ? "hsl(0 72% 51%)"
+                      : hoveredCountry.heat >= 40 ? "hsl(38 100% 50%)"
+                      : "hsl(155 55% 42%)",
+                  }}
+                />
+              </div>
+              <span className="font-mono text-[10px] text-muted-foreground">HEAT {hoveredCountry.heat}</span>
+            </div>
           </div>
         )}
       </div>
