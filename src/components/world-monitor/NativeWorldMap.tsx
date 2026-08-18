@@ -467,6 +467,43 @@ const NativeWorldMap = ({
             </span>
           </div>
         )}
+
+        {hoveredCountry && !hoveredMarker && (
+          <div
+            className="glass-card pointer-events-none absolute z-10 min-w-[210px] max-w-[260px] rounded-lg border border-primary/30 p-3 backdrop-blur-md animate-fade-in-up"
+            style={{ left: hoveredCountry.x, top: hoveredCountry.y }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg leading-none">{hoveredCountry.flag_emoji}</span>
+              <span className="font-display text-sm font-bold">{hoveredCountry.country}</span>
+            </div>
+            {hoveredCountry.regime_status && (
+              <div className="mt-2 text-[11px] text-muted-foreground">
+                Regime: <span className="text-foreground">{hoveredCountry.regime_status}</span>
+              </div>
+            )}
+            {hoveredCountry.risk_tag && (
+              <span className="mt-2 inline-block rounded bg-primary/15 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-primary">
+                {hoveredCountry.risk_tag}
+              </span>
+            )}
+            <div className="mt-2 flex items-center gap-2">
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${hoveredCountry.heat}%`,
+                    backgroundColor:
+                      hoveredCountry.heat >= 70 ? "hsl(0 72% 51%)"
+                      : hoveredCountry.heat >= 40 ? "hsl(38 100% 50%)"
+                      : "hsl(155 55% 42%)",
+                  }}
+                />
+              </div>
+              <span className="font-mono text-[10px] text-muted-foreground">HEAT {hoveredCountry.heat}</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
