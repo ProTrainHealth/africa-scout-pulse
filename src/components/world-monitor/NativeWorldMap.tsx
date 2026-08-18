@@ -229,12 +229,50 @@ const NativeWorldMap = ({
   const toggleLayer = (key: keyof typeof layers) =>
     setLayers((s) => ({ ...s, [key]: !s[key] }));
 
+  const infoForIso3 = (iso3: string | undefined, geoName: string): CountryInfo | null => {
+    if (!iso3 && !geoName) return null;
+    const iso2 = iso3 ? ISO3_TO_ISO2[iso3] : undefined;
+    return (
+      (iso2 ? infoByKey[iso2] : undefined) ??
+      (iso3 ? infoByKey[iso3] : undefined) ??
+      infoByKey[geoName.toUpperCase()] ??
+      null
+    );
+  };
+
+  // Smoothly recenter on a focused country (ISO3)
+  useEffect(() => {
+    if (!focusCountry || geoFeatures.length === 0) return;
+    const target = geoFeatures.find(
+      (g) => NUMERIC_TO_ISO3[String(g.id).padStart(3, "0")] === focusCountry,
+    );
+    if (!target) return;
+    const centroid = geoCentroid(target as never) as [number, number];
+    const p = projection(centroid);
+    if (!p) return;
+    const nextZoom = 2.6;
+    setZoom(nextZoom);
+    setPan({
+      x: -nextZoom * (p[0] - VIEW_W / 2),
+      y: -nextZoom * (p[1] - height / 2),
+    });
+  }, [focusCountry, geoFeatures, projection, height]);
+
   const handleMarkerEnter = (e: React.MouseEvent, m: TrackedMarker) => {
     const rect = containerRef.current?.getBoundingClientRect();
     setHoveredMarker({
       name: m.name, score: m.score, signal: m.signal,
       x: e.clientX - (rect?.left ?? 0) + 12,
       y: e.clientY - (rect?.top ?? 0) + 12,
+    });
+  };
+
+  const handleCountryEnter = (e: React.MouseEvent, info: CountryInfo) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    setHoveredCountry({
+      ...info,
+      x: e.clientX - (rect?.left ?? 0) + 14,
+      y: e.clientY - (rect?.top ?? 0) + 14,
     });
   };
 
