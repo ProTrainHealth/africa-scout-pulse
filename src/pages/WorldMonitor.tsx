@@ -320,12 +320,67 @@ const WorldMonitor = () => {
 
         {/* Map */}
         <div className="glass-card glow-brand rounded-2xl overflow-hidden p-4">
-          <NativeWorldMap
-            showControls={true}
-            height={520}
-            onCountryClick={handleCountryClick}
-            selectedCountryCode={selectedIso2}
-          />
+          <ResizablePanelGroup direction="horizontal" className="min-h-[520px] rounded-xl">
+            <ResizablePanel defaultSize={24} minSize={16} maxSize={40} className="hidden md:block">
+              <div className="h-full rounded-xl border border-border/40 bg-card/40 p-3">
+                <div className="flex items-center gap-2 border-b border-border/40 pb-2">
+                  <Flame className="h-3.5 w-3.5 text-primary" />
+                  <h2 className="font-mono text-[11px] font-bold uppercase tracking-wider text-primary">
+                    Top Risk Heat
+                  </h2>
+                </div>
+                <div className="mt-2 space-y-1.5">
+                  {topRisk.length === 0 && (
+                    <p className="py-4 text-xs text-muted-foreground">Not available</p>
+                  )}
+                  {topRisk.map((c) => {
+                    const iso3 = ISO2_TO_ISO3[(c.country_code ?? '').toUpperCase()];
+                    const active = focusIso3 && iso3 === focusIso3;
+                    return (
+                      <button
+                        key={c.country}
+                        onClick={() => iso3 && setFocusIso3(iso3 === focusIso3 ? null : iso3)}
+                        className={`w-full rounded-lg border px-2.5 py-2 text-left transition-colors ${
+                          active
+                            ? 'border-primary/50 bg-primary/10'
+                            : 'border-border/30 bg-secondary/30 hover:border-primary/30'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate text-xs font-medium">
+                            {c.flag_emoji} {c.country}
+                          </span>
+                          <span className="font-mono text-[10px] text-muted-foreground">
+                            {c.heat_intensity}
+                          </span>
+                        </div>
+                        <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-secondary">
+                          <div
+                            className="h-full rounded-full bg-primary"
+                            style={{ width: `${Math.min(100, Math.max(0, c.heat_intensity))}%` }}
+                          />
+                        </div>
+                        <span className="mt-1 block truncate font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                          {c.risk_tag}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </ResizablePanel>
+            <ResizableHandle withHandle className="mx-2 hidden md:flex" />
+            <ResizablePanel defaultSize={76} minSize={50}>
+              <NativeWorldMap
+                showControls={true}
+                height={520}
+                onCountryClick={handleCountryClick}
+                selectedCountryCode={selectedIso2}
+                focusCountry={focusIso3}
+              />
+            </ResizablePanel>
+          </ResizablePanelGroup>
+
 
           {/* Legend */}
           <div className="mt-4 flex flex-wrap items-center gap-6 border-t border-border/40 pt-3 text-xs">
