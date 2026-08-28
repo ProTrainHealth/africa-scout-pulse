@@ -7,42 +7,53 @@ import { useToast } from '@/hooks/use-toast';
 import FeatureRequestForm from '@/components/FeatureRequestForm';
 import Seo from '@/components/Seo';
 
-type BillingInterval = 'monthly' | 'quarterly' | 'yearly';
-type PaymentProvider = 'paypal' | 'paystack';
+import {
+  BILLING_INTERVALS,
+  PAYMENT_PROVIDERS,
+  formatPrice,
+  savingsLabel,
+  isBillingInterval,
+  isPaymentProvider,
+  type BillingInterval,
+  type PaymentProvider,
+  type PaidPlan,
+} from '@/lib/pricing';
 
-const tiers = [
+type Tier = {
+  name: string;
+  description: string;
+  features: string[];
+  icon: typeof Eye;
+  highlighted: boolean;
+  limited?: boolean;
+  planKey: PaidPlan | null;
+};
+
+const tiers: Tier[] = [
   {
     name: 'Observer',
-    prices: { monthly: 'Free', quarterly: 'Free', yearly: 'Free' } as Record<BillingInterval, string>,
     description: 'Deep dives, sector theses, and narrative intelligence.',
     features: ['Weekly deep-dive reports', 'Sector thesis publications', 'Public Phantom Portfolio', 'Community access'],
     icon: Eye,
     highlighted: false,
-    planKey: null as string | null,
-    amounts: { monthly: 0, quarterly: 0, yearly: 0 },
+    planKey: null,
   },
   {
     name: 'Analyst',
-    prices: { monthly: '$139/mo', quarterly: '$369/qtr', yearly: '$1,299/yr' } as Record<BillingInterval, string>,
-    savings: { monthly: null, quarterly: '≈ 11% off', yearly: '≈ 22% off' } as Record<BillingInterval, string | null>,
     description: 'Full dashboard access with real-time Scout Scores.',
     features: ['Everything in Observer', 'Live company ledger', 'Scout Score tracking', 'Catalyst calendar', 'Institutional flow data'],
     icon: BarChart3,
     highlighted: true,
     planKey: 'analyst',
-    amounts: { monthly: 13900, quarterly: 36900, yearly: 129900 },
   },
   {
     name: 'Boardroom',
-    prices: { monthly: '$449/mo', quarterly: '$1,199/qtr', yearly: '$4,299/yr' } as Record<BillingInterval, string>,
-    savings: { monthly: null, quarterly: '≈ 11% off', yearly: '≈ 20% off' } as Record<BillingInterval, string | null>,
     description: 'Private signal room. Limited to 50 seats.',
     features: ['Everything in Analyst', 'Private signal room', 'Private voice notes', 'Management call summaries', 'Monthly video boardroom', 'Direct analyst access'],
     icon: Lock,
     highlighted: false,
     limited: true,
     planKey: 'boardroom',
-    amounts: { monthly: 44900, quarterly: 119900, yearly: 429900 },
   },
 ];
 
