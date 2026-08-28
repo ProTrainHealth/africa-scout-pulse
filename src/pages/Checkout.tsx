@@ -72,8 +72,7 @@ const Checkout = () => {
     }
   };
 
-  const validPlan = prices[plan];
-  if (!validPlan) {
+  if (!plan) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto flex flex-col items-center justify-center px-4 pt-24 text-center">
