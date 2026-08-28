@@ -121,7 +121,7 @@ const Pricing = () => {
 
         {/* Billing toggle */}
         <div className="mx-auto mb-2 flex max-w-xs items-center justify-center gap-1 rounded-xl border border-border/50 bg-secondary/50 p-1">
-          {(['monthly', 'quarterly', 'yearly'] as BillingInterval[]).map((interval) => (
+          {BILLING_INTERVALS.map((interval) => (
             <button
               key={interval}
               onClick={() => setBilling(interval)}
@@ -138,7 +138,7 @@ const Pricing = () => {
 
         {/* Payment provider toggle */}
         <div className="mx-auto mb-6 flex max-w-[200px] items-center justify-center gap-1 rounded-xl border border-border/40 bg-card/40 p-1">
-          {(['paypal', 'paystack'] as PaymentProvider[]).map((p) => (
+          {PAYMENT_PROVIDERS.map((p) => (
             <button
               key={p}
               onClick={() => setProvider(p)}
