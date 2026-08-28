@@ -75,7 +75,36 @@ const DashSkeleton = () => (
 
 const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
-  const { loading: subLoading } = useSubscription();
+  const { loading: subLoading, isActive, plan } = useSubscription();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { toast } = useToast();
+
+  // Post-payment return: providers redirect to /dashboard?payment=success
+  useEffect(() => {
+    const payment = searchParams.get('payment');
+    if (!payment) return;
+
+    if (payment === 'success') {
+      toast({
+        title: 'Payment received',
+        description: isActive
+          ? `Your ${plan === 'boardroom' ? 'Boardroom' : 'Analyst'} access is live.`
+          : 'Activating your access — this updates automatically within a few seconds.',
+      });
+    } else if (payment === 'canceled') {
+      toast({ title: 'Checkout canceled', description: 'No payment was taken.', variant: 'destructive' });
+    }
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('payment');
+    next.delete('provider');
+    next.delete('reference');
+    next.delete('trxref');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
 
   // Live data
   const [ledger, setLedger] = useState<LedgerRow[]>([]);
