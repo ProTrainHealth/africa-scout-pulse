@@ -205,6 +205,8 @@ const Dashboard = () => {
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">{todayStr()}</p>
             </div>
+            <div className="flex items-center gap-2">
+              <TierBadge />
             <div className="flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5">
               <span className="relative flex h-2.5 w-2.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
