@@ -8,6 +8,8 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import TierBadge from '@/components/TierBadge';
+import { useToast } from '@/hooks/use-toast';
 
 
 
