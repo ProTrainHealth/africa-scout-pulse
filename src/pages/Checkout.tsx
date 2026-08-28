@@ -100,12 +100,12 @@ const Checkout = () => {
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Order Summary</h2>
             <div className="mt-4 space-y-3">
               <div className="flex justify-between">
-                <span className="font-display font-semibold">{tierNames[plan]} Plan</span>
-                <span className="font-display font-bold text-primary">{priceLabels[plan][period]}</span>
+                <span className="font-display font-semibold">{PLAN_NAMES[plan]} Plan</span>
+                <span className="font-display font-bold text-primary">{formatPrice(plan, period)}</span>
               </div>
               <div className="flex justify-between text-sm text-muted-foreground">
                 <span>Billing</span>
-                <span>{intervalLabels[period]}</span>
+                <span>{INTERVAL_LABELS[period]}</span>
               </div>
             </div>
           </div>
