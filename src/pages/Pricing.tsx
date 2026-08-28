@@ -179,11 +179,11 @@ const Pricing = () => {
               </div>
               <h3 className="font-display text-xl font-bold">{tier.name}</h3>
               <div className="mt-2 font-display text-3xl font-bold text-primary">
-                {tier.prices[billing]}
+                {tier.planKey ? formatPrice(tier.planKey, billing) : 'Free'}
               </div>
-              {'savings' in tier && tier.savings && tier.savings[billing] && (
+              {tier.planKey && savingsLabel(tier.planKey, billing) && (
                 <div className="mt-1 text-xs font-medium text-accent">
-                  {tier.savings[billing]}
+                  {savingsLabel(tier.planKey, billing)}
                 </div>
               )}
               <p className="mt-2 text-sm text-muted-foreground">{tier.description}</p>
