@@ -214,6 +214,7 @@ const Dashboard = () => {
               </span>
               <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-primary">LIVE</span>
             </div>
+            </div>
           </header>
 
           {/* ZONE 2 — KPI strip */}
