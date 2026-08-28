@@ -65,6 +65,15 @@ function verifyPaystackSignature(rawBody: string, signature: string | null): boo
   return hash === signature
 }
 
+// Period end derived from the billing interval used at checkout.
+function periodEndFor(interval?: string): string {
+  const end = new Date()
+  if (interval === 'yearly') end.setFullYear(end.getFullYear() + 1)
+  else if (interval === 'quarterly') end.setMonth(end.getMonth() + 3)
+  else end.setMonth(end.getMonth() + 1)
+  return end.toISOString()
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -109,8 +118,6 @@ Deno.serve(async (req) => {
           return new Response(JSON.stringify({ received: true }), { headers: corsHeaders })
         }
 
-        const periodEnd = new Date()
-        periodEnd.setMonth(periodEnd.getMonth() + 1)
 
         await supabaseAdmin.from('subscriptions').upsert({
           user_id: metadata.user_id,
@@ -119,7 +126,7 @@ Deno.serve(async (req) => {
           payment_provider: 'paystack',
           provider_subscription_id: data.reference,
           provider_customer_id: data.customer?.customer_code || null,
-          current_period_end: periodEnd.toISOString(),
+          current_period_end: periodEndFor(metadata.interval),
         }, { onConflict: 'user_id' })
       }
 
@@ -143,8 +150,6 @@ Deno.serve(async (req) => {
 
       // Plan downgrade — Paystack subscription.create on a different plan
       if (event === 'subscription.create' && data.metadata?.user_id && data.metadata?.plan) {
-        const periodEnd = new Date()
-        periodEnd.setMonth(periodEnd.getMonth() + 1)
         await supabaseAdmin.from('subscriptions').upsert({
           user_id: data.metadata.user_id,
           plan: data.metadata.plan,
@@ -152,7 +157,7 @@ Deno.serve(async (req) => {
           payment_provider: 'paystack',
           provider_subscription_id: data.subscription_code || data.id,
           provider_customer_id: data.customer?.customer_code || null,
-          current_period_end: periodEnd.toISOString(),
+          current_period_end: periodEndFor(data.metadata?.interval),
         }, { onConflict: 'user_id' })
       }
 
@@ -166,15 +171,13 @@ Deno.serve(async (req) => {
           return new Response(JSON.stringify({ received: true }), { headers: corsHeaders })
         }
 
-        let parsed: { user_id: string; plan: string }
+        let parsed: { user_id: string; plan: string; interval?: string }
         try {
           parsed = JSON.parse(customId)
         } catch {
           return new Response(JSON.stringify({ received: true }), { headers: corsHeaders })
         }
 
-        const periodEnd = new Date()
-        periodEnd.setMonth(periodEnd.getMonth() + 1)
 
         await supabaseAdmin.from('subscriptions').upsert({
           user_id: parsed.user_id,
@@ -183,7 +186,7 @@ Deno.serve(async (req) => {
           payment_provider: 'paypal',
           provider_subscription_id: resource.id,
           provider_customer_id: resource.payer?.payer_id || null,
-          current_period_end: periodEnd.toISOString(),
+          current_period_end: periodEndFor(parsed.interval),
         }, { onConflict: 'user_id' })
       }
 

@@ -7,42 +7,53 @@ import { useToast } from '@/hooks/use-toast';
 import FeatureRequestForm from '@/components/FeatureRequestForm';
 import Seo from '@/components/Seo';
 
-type BillingInterval = 'monthly' | 'quarterly' | 'yearly';
-type PaymentProvider = 'paypal' | 'paystack';
+import {
+  BILLING_INTERVALS,
+  PAYMENT_PROVIDERS,
+  formatPrice,
+  savingsLabel,
+  isBillingInterval,
+  isPaymentProvider,
+  type BillingInterval,
+  type PaymentProvider,
+  type PaidPlan,
+} from '@/lib/pricing';
 
-const tiers = [
+type Tier = {
+  name: string;
+  description: string;
+  features: string[];
+  icon: typeof Eye;
+  highlighted: boolean;
+  limited?: boolean;
+  planKey: PaidPlan | null;
+};
+
+const tiers: Tier[] = [
   {
     name: 'Observer',
-    prices: { monthly: 'Free', quarterly: 'Free', yearly: 'Free' } as Record<BillingInterval, string>,
     description: 'Deep dives, sector theses, and narrative intelligence.',
     features: ['Weekly deep-dive reports', 'Sector thesis publications', 'Public Phantom Portfolio', 'Community access'],
     icon: Eye,
     highlighted: false,
-    planKey: null as string | null,
-    amounts: { monthly: 0, quarterly: 0, yearly: 0 },
+    planKey: null,
   },
   {
     name: 'Analyst',
-    prices: { monthly: '$139/mo', quarterly: '$369/qtr', yearly: '$1,299/yr' } as Record<BillingInterval, string>,
-    savings: { monthly: null, quarterly: '≈ 11% off', yearly: '≈ 22% off' } as Record<BillingInterval, string | null>,
     description: 'Full dashboard access with real-time Scout Scores.',
     features: ['Everything in Observer', 'Live company ledger', 'Scout Score tracking', 'Catalyst calendar', 'Institutional flow data'],
     icon: BarChart3,
     highlighted: true,
     planKey: 'analyst',
-    amounts: { monthly: 13900, quarterly: 36900, yearly: 129900 },
   },
   {
     name: 'Boardroom',
-    prices: { monthly: '$449/mo', quarterly: '$1,199/qtr', yearly: '$4,299/yr' } as Record<BillingInterval, string>,
-    savings: { monthly: null, quarterly: '≈ 11% off', yearly: '≈ 20% off' } as Record<BillingInterval, string | null>,
     description: 'Private signal room. Limited to 50 seats.',
     features: ['Everything in Analyst', 'Private signal room', 'Private voice notes', 'Management call summaries', 'Monthly video boardroom', 'Direct analyst access'],
     icon: Lock,
     highlighted: false,
     limited: true,
     planKey: 'boardroom',
-    amounts: { monthly: 44900, quarterly: 119900, yearly: 429900 },
   },
 ];
 
@@ -53,14 +64,14 @@ const Pricing = () => {
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const paramPeriod = searchParams.get('period') as BillingInterval | null;
-  const paramProvider = searchParams.get('provider') as PaymentProvider | null;
+  const paramPeriod = searchParams.get('period');
+  const paramProvider = searchParams.get('provider');
 
   const [billing, setBilling] = useState<BillingInterval>(
-    paramPeriod && ['monthly', 'quarterly', 'yearly'].includes(paramPeriod) ? paramPeriod : 'monthly'
+    isBillingInterval(paramPeriod) ? paramPeriod : 'monthly'
   );
   const [provider, setProvider] = useState<PaymentProvider>(
-    paramProvider && ['paypal', 'paystack'].includes(paramProvider) ? paramProvider : 'paypal'
+    isPaymentProvider(paramProvider) ? paramProvider : 'paypal'
   );
 
   // Sync state to URL
@@ -110,7 +121,7 @@ const Pricing = () => {
 
         {/* Billing toggle */}
         <div className="mx-auto mb-2 flex max-w-xs items-center justify-center gap-1 rounded-xl border border-border/50 bg-secondary/50 p-1">
-          {(['monthly', 'quarterly', 'yearly'] as BillingInterval[]).map((interval) => (
+          {BILLING_INTERVALS.map((interval) => (
             <button
               key={interval}
               onClick={() => setBilling(interval)}
@@ -127,7 +138,7 @@ const Pricing = () => {
 
         {/* Payment provider toggle */}
         <div className="mx-auto mb-6 flex max-w-[200px] items-center justify-center gap-1 rounded-xl border border-border/40 bg-card/40 p-1">
-          {(['paypal', 'paystack'] as PaymentProvider[]).map((p) => (
+          {PAYMENT_PROVIDERS.map((p) => (
             <button
               key={p}
               onClick={() => setProvider(p)}
@@ -168,11 +179,11 @@ const Pricing = () => {
               </div>
               <h3 className="font-display text-xl font-bold">{tier.name}</h3>
               <div className="mt-2 font-display text-3xl font-bold text-primary">
-                {tier.prices[billing]}
+                {tier.planKey ? formatPrice(tier.planKey, billing) : 'Free'}
               </div>
-              {'savings' in tier && tier.savings && tier.savings[billing] && (
+              {tier.planKey && savingsLabel(tier.planKey, billing) && (
                 <div className="mt-1 text-xs font-medium text-accent">
-                  {tier.savings[billing]}
+                  {savingsLabel(tier.planKey, billing)}
                 </div>
               )}
               <p className="mt-2 text-sm text-muted-foreground">{tier.description}</p>

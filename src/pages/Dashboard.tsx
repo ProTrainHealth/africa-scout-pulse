@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   LayoutDashboard, Calendar, Gauge, LineChart, Radio,
 } from 'lucide-react';
@@ -8,6 +8,8 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import TierBadge from '@/components/TierBadge';
+import { useToast } from '@/hooks/use-toast';
 
 
 
@@ -73,7 +75,36 @@ const DashSkeleton = () => (
 
 const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
-  const { loading: subLoading } = useSubscription();
+  const { loading: subLoading, isActive, plan } = useSubscription();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { toast } = useToast();
+
+  // Post-payment return: providers redirect to /dashboard?payment=success
+  useEffect(() => {
+    const payment = searchParams.get('payment');
+    if (!payment) return;
+
+    if (payment === 'success') {
+      toast({
+        title: 'Payment received',
+        description: isActive
+          ? `Your ${plan === 'boardroom' ? 'Boardroom' : 'Analyst'} access is live.`
+          : 'Activating your access — this updates automatically within a few seconds.',
+      });
+    } else if (payment === 'canceled') {
+      toast({ title: 'Checkout canceled', description: 'No payment was taken.', variant: 'destructive' });
+    }
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('payment');
+    next.delete('provider');
+    next.delete('reference');
+    next.delete('trxref');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
 
   // Live data
   const [ledger, setLedger] = useState<LedgerRow[]>([]);
@@ -174,12 +205,15 @@ const Dashboard = () => {
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">{todayStr()}</p>
             </div>
+            <div className="flex items-center gap-2">
+              <TierBadge />
             <div className="flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5">
               <span className="relative flex h-2.5 w-2.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
               </span>
               <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-primary">LIVE</span>
+            </div>
             </div>
           </header>
 
