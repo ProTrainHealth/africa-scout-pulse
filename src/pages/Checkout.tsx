@@ -6,21 +6,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 
-type BillingInterval = 'monthly' | 'quarterly' | 'yearly';
-type PaymentProvider = 'paypal' | 'paystack';
-
-const prices: Record<string, Record<BillingInterval, number>> = {
-  analyst: { monthly: 13900, quarterly: 36900, yearly: 129900 },
-  boardroom: { monthly: 44900, quarterly: 119900, yearly: 429900 },
-};
-
-const priceLabels: Record<string, Record<BillingInterval, string>> = {
-  analyst: { monthly: '$139/mo', quarterly: '$369/qtr', yearly: '$1,299/yr' },
-  boardroom: { monthly: '$449/mo', quarterly: '$1,199/qtr', yearly: '$4,299/yr' },
-};
-
-const tierNames: Record<string, string> = { analyst: 'Analyst', boardroom: 'Boardroom' };
-const intervalLabels: Record<BillingInterval, string> = { monthly: 'Monthly', quarterly: 'Quarterly', yearly: 'Yearly' };
+import {
+  PLAN_NAMES,
+  INTERVAL_LABELS,
+  formatPrice,
+  isPaidPlan,
+  isBillingInterval,
+  isPaymentProvider,
+  type BillingInterval,
+  type PaymentProvider,
+} from '@/lib/pricing';
 
 const Checkout = () => {
   const [params] = useSearchParams();
@@ -28,9 +23,14 @@ const Checkout = () => {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
-  const plan = params.get('plan') || 'analyst';
-  const period = (params.get('period') || 'monthly') as BillingInterval;
-  const [provider, setProvider] = useState<PaymentProvider>('paypal');
+  const rawPlan = params.get('plan');
+  const plan = isPaidPlan(rawPlan) ? rawPlan : null;
+  const rawPeriod = params.get('period');
+  const period: BillingInterval = isBillingInterval(rawPeriod) ? rawPeriod : 'monthly';
+  const rawProvider = params.get('provider');
+  const [provider, setProvider] = useState<PaymentProvider>(
+    isPaymentProvider(rawProvider) ? rawProvider : 'paypal'
+  );
 
   const [status, setStatus] = useState<'loading' | 'ready' | 'processing' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
