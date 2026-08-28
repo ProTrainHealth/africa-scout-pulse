@@ -64,14 +64,14 @@ const Pricing = () => {
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const paramPeriod = searchParams.get('period') as BillingInterval | null;
-  const paramProvider = searchParams.get('provider') as PaymentProvider | null;
+  const paramPeriod = searchParams.get('period');
+  const paramProvider = searchParams.get('provider');
 
   const [billing, setBilling] = useState<BillingInterval>(
-    paramPeriod && ['monthly', 'quarterly', 'yearly'].includes(paramPeriod) ? paramPeriod : 'monthly'
+    isBillingInterval(paramPeriod) ? paramPeriod : 'monthly'
   );
   const [provider, setProvider] = useState<PaymentProvider>(
-    paramProvider && ['paypal', 'paystack'].includes(paramProvider) ? paramProvider : 'paypal'
+    isPaymentProvider(paramProvider) ? paramProvider : 'paypal'
   );
 
   // Sync state to URL
