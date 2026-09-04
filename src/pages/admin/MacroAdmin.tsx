@@ -21,7 +21,7 @@ type MacroRow = {
   id: string;
   indicator: string;
   current_value: string;
-  trend: 'rising' | 'falling' | 'stable' | 'volatile';
+  trend: 'rising' | 'falling' | 'stable' | 'volatile' | 'elevated' | 'compressing';
   unit: string | null;
   source: string | null;
   updated_at: string;
@@ -32,6 +32,8 @@ const TREND_STYLES: Record<string, string> = {
   falling: 'bg-destructive/10 text-destructive',
   stable: 'bg-muted text-muted-foreground',
   volatile: 'bg-primary/10 text-primary',
+  elevated: 'bg-accent/10 text-accent',
+  compressing: 'bg-destructive/10 text-destructive',
 };
 
 const MacroAdmin = () => {
@@ -256,6 +258,8 @@ const MacroAdmin = () => {
                   <SelectItem value="falling">Falling ↓</SelectItem>
                   <SelectItem value="stable">Stable →</SelectItem>
                   <SelectItem value="volatile">Volatile ↕</SelectItem>
+                  <SelectItem value="elevated">Elevated ↑</SelectItem>
+                  <SelectItem value="compressing">Compressing ↓</SelectItem>
                 </SelectContent>
               </Select>
             </div>

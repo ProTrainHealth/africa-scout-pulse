@@ -52,14 +52,18 @@ interface MacroRow {
 
 const TREND_GLYPH: Record<string, string> = {
   rising: '↑',
+  elevated: '↑',
   falling: '↓',
+  compressing: '↓',
   stable: '→',
   volatile: '↕',
 };
 
 const TREND_COLOR: Record<string, string> = {
   rising: 'hsl(155 55% 42%)',
+  elevated: 'hsl(155 55% 42%)',
   falling: 'hsl(0 72% 51%)',
+  compressing: 'hsl(0 72% 51%)',
   stable: 'hsl(220 8% 65%)',
   volatile: 'hsl(38 100% 50%)',
 };
