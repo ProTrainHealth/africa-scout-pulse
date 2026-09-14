@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Globe, Star, BookOpen, Settings2,
-  LogOut, Menu, Activity, Radio, LineChart,
+  LogOut, Menu, Activity, Radio, LineChart, Shield,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -35,7 +35,8 @@ const navClasses = (isActive: boolean) =>
 const SidebarNav = ({
   expanded,
   onNavigate,
-}: { expanded: boolean; onNavigate?: () => void }) => (
+  isAdmin,
+}: { expanded: boolean; onNavigate?: () => void; isAdmin?: boolean }) => (
   <nav className="flex-1 py-3 px-2 space-y-0.5">
     {SIDEBAR_ITEMS.map((item) => (
       <NavLink
@@ -48,11 +49,24 @@ const SidebarNav = ({
         {expanded && <span>{item.label}</span>}
       </NavLink>
     ))}
+    {isAdmin && (
+      <>
+        <hr className="my-2 border-border/40" />
+        <NavLink
+          to="/admin"
+          onClick={onNavigate}
+          className={({ isActive }) => navClasses(isActive)}
+        >
+          <Shield className="h-4 w-4 shrink-0" />
+          {expanded && <span>Admin Console</span>}
+        </NavLink>
+      </>
+    )}
   </nav>
 );
 
 const DashboardLayout = () => {
-  const { signOut } = useAuth();
+  const { signOut, isAdmin } = useAuth();
   const { plan } = useSubscription();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -106,7 +120,7 @@ const DashboardLayout = () => {
             <Menu className="h-4 w-4" />
           </button>
         </div>
-        <SidebarNav expanded={sidebarOpen} />
+        <SidebarNav expanded={sidebarOpen} isAdmin={isAdmin} />
         <Footer expanded={sidebarOpen} />
       </aside>
 
