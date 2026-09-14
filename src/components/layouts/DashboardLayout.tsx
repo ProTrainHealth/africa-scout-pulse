@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Globe, Star, BookOpen, Settings2,
-  LogOut, Menu, Activity, Radio, LineChart,
+  LogOut, Menu, Activity, Radio, LineChart, Shield,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
