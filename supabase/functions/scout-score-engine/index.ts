@@ -23,6 +23,7 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { delay } from 'https://deno.land/std@0.224.0/async/delay.ts';
+import { authorizeEngineRequest } from '../_shared/engine-auth.ts';
 
 const JOB_NAME = 'scout-score-engine';
 const MODEL = 'google/gemini-3.7-flash';
@@ -174,12 +175,10 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
-  // ---- 1. Auth: service role only -------------------------------------------
+  // ---- 1. Auth: service role (pg_cron) or an authenticated admin ------------
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  const provided = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
-  if (!serviceKey || !provided || !safeEqual(provided, serviceKey)) {
-    return json({ error: 'Unauthorized' }, 401);
-  }
+  const auth = await authorizeEngineRequest(req);
+  if (!auth.ok) return json({ error: 'Unauthorized' }, 401);
 
   const apiKey = Deno.env.get('LOVABLE_API_KEY');
   if (!apiKey) return json({ error: 'AI is not configured.' }, 500);
