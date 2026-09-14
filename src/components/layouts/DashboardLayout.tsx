@@ -66,7 +66,7 @@ const SidebarNav = ({
 );
 
 const DashboardLayout = () => {
-  const { signOut } = useAuth();
+  const { signOut, isAdmin } = useAuth();
   const { plan } = useSubscription();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
