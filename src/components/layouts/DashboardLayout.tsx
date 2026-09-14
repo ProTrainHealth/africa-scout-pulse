@@ -120,7 +120,7 @@ const DashboardLayout = () => {
             <Menu className="h-4 w-4" />
           </button>
         </div>
-        <SidebarNav expanded={sidebarOpen} />
+        <SidebarNav expanded={sidebarOpen} isAdmin={isAdmin} />
         <Footer expanded={sidebarOpen} />
       </aside>
 
