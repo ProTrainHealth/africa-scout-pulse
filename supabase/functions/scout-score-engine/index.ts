@@ -47,14 +47,6 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 
-/** Constant-time-ish comparison so the service key can't be probed byte by byte. */
-function safeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
-
 /** Best-effort recent-news context. Never throws — the model works without it. */
 async function fetchNewsContext(name: string, country: string): Promise<string> {
   try {
