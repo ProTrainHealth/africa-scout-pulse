@@ -114,6 +114,7 @@ const Admin = () => {
             </h1>
           </div>
           <div className="flex items-center gap-2">
+            <a href="/admin/engine" className="hidden sm:inline text-xs text-muted-foreground hover:text-foreground">Engine</a>
             <a href="/admin/regime" className="hidden sm:inline text-xs text-muted-foreground hover:text-foreground">Regime</a>
             <a href="/admin/signals" className="hidden sm:inline text-xs text-muted-foreground hover:text-foreground">Signals</a>
             <a href="/admin/catalysts" className="hidden sm:inline text-xs text-muted-foreground hover:text-foreground">Catalysts</a>

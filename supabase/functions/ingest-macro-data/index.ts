@@ -1,7 +1,8 @@
 // Ingests macro market indicators (FX, commodities, sovereign risk) into public.macro_indicators.
-// Auth: Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY> (server-to-server / pg_cron only).
+// Auth: service role key (pg_cron) or an authenticated admin user JWT.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { authorizeEngineRequest } from '../_shared/engine-auth.ts';
 
 type Trend = 'elevated' | 'compressing' | 'stable';
 
@@ -18,13 +19,6 @@ const json = (body: unknown, status = 200) =>
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
-
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
 
 async function getJson(url: string): Promise<any | null> {
   try {
@@ -81,17 +75,24 @@ async function collect(): Promise<Fetched[]> {
   return out;
 }
 
+
+async function setJobState(supabase: any, job: string, patch: Record<string, unknown>) {
+  await supabase.from('job_state').upsert(
+    { job_name: job, updated_at: new Date().toISOString(), ...patch },
+    { onConflict: 'job_name' },
+  );
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  const provided = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
-  if (!serviceKey || !provided || !timingSafeEqual(provided, serviceKey)) {
-    return json({ error: 'Unauthorized' }, 401);
-  }
+  const auth = await authorizeEngineRequest(req);
+  if (!auth.ok) return json({ error: 'Unauthorized' }, 401);
 
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, serviceKey);
+  await setJobState(supabase, 'ingest-macro-data', { last_run_at: new Date().toISOString(), last_error: null });
 
   const fetched = await collect();
   if (fetched.length === 0) {
@@ -105,6 +106,7 @@ Deno.serve(async (req) => {
 
   if (readError) {
     console.error('[ingest-macro-data] read failed', readError.message);
+    await setJobState(supabase, 'ingest-macro-data', { last_error: 'An internal error occurred.' });
     return json({ error: 'An internal error occurred.' }, 500);
   }
 
@@ -138,6 +140,7 @@ Deno.serve(async (req) => {
 
   if (error) {
     console.error('[ingest-macro-data] upsert failed', error.message);
+    await setJobState(supabase, 'ingest-macro-data', { last_error: 'An internal error occurred.' });
     return json({ error: 'An internal error occurred.' }, 500);
   }
 

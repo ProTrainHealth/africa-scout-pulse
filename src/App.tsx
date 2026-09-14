@@ -13,6 +13,7 @@ import SignalsAdmin from "./pages/admin/SignalsAdmin";
 import CatalystsAdmin from "./pages/admin/CatalystsAdmin";
 import MacroAdmin from "./pages/admin/MacroAdmin";
 import AdminSecurity from "./pages/admin/Security";
+import AdminEngine from "./pages/admin/Engine";
 import Resources from "./pages/Resources";
 import ResourceDetail from "./pages/ResourceDetail";
 import Pricing from "./pages/Pricing";
@@ -91,6 +92,7 @@ const App = () => {
                 <Route path="/admin/catalysts" element={<ErrorBoundary><CatalystsAdmin /></ErrorBoundary>} />
                 <Route path="/admin/macro" element={<ErrorBoundary><MacroAdmin /></ErrorBoundary>} />
                 <Route path="/admin/security" element={<ErrorBoundary><AdminSecurity /></ErrorBoundary>} />
+                <Route path="/admin/engine" element={<ErrorBoundary><AdminEngine /></ErrorBoundary>} />
               </Route>
             </Route>
 
