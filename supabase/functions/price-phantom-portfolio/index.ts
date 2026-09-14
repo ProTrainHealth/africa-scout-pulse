@@ -1,20 +1,14 @@
 // Reprices every position in public.phantom_portfolio at market close.
-// Auth: Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY> (server-to-server / pg_cron only).
+// Auth: service role key (pg_cron) or an authenticated admin user JWT.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { authorizeEngineRequest } from '../_shared/engine-auth.ts';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
-
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
 
 /**
  * Deterministic mock market price for a company on a given trading day.
@@ -36,10 +30,8 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  const provided = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
-  if (!serviceKey || !provided || !timingSafeEqual(provided, serviceKey)) {
-    return json({ error: 'Unauthorized' }, 401);
-  }
+  const auth = await authorizeEngineRequest(req);
+  if (!auth.ok) return json({ error: 'Unauthorized' }, 401);
 
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, serviceKey);
 
