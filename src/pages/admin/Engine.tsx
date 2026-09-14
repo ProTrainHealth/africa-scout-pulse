@@ -108,7 +108,7 @@ const Engine = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Seo title="Engine Control Center | Analyst Panel" description="Trigger and monitor background intelligence jobs." path="/admin/engine" noIndex />
+      <Seo title="Engine Control Center | Analyst Panel" description="Trigger and monitor background intelligence jobs." path="/admin/engine" />
 
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="container mx-auto flex h-14 items-center justify-between px-4">
