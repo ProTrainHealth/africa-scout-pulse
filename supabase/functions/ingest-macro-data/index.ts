@@ -75,6 +75,14 @@ async function collect(): Promise<Fetched[]> {
   return out;
 }
 
+
+async function setJobState(supabase: any, job: string, patch: Record<string, unknown>) {
+  await supabase.from('job_state').upsert(
+    { job_name: job, updated_at: new Date().toISOString(), ...patch },
+    { onConflict: 'job_name' },
+  );
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
@@ -84,6 +92,7 @@ Deno.serve(async (req) => {
   if (!auth.ok) return json({ error: 'Unauthorized' }, 401);
 
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, serviceKey);
+  await setJobState(supabase, 'ingest-macro-data', { last_run_at: new Date().toISOString(), last_error: null });
 
   const fetched = await collect();
   if (fetched.length === 0) {
@@ -97,6 +106,7 @@ Deno.serve(async (req) => {
 
   if (readError) {
     console.error('[ingest-macro-data] read failed', readError.message);
+    await setJobState(supabase, 'ingest-macro-data', { last_error: 'An internal error occurred.' });
     return json({ error: 'An internal error occurred.' }, 500);
   }
 
@@ -130,6 +140,7 @@ Deno.serve(async (req) => {
 
   if (error) {
     console.error('[ingest-macro-data] upsert failed', error.message);
+    await setJobState(supabase, 'ingest-macro-data', { last_error: 'An internal error occurred.' });
     return json({ error: 'An internal error occurred.' }, 500);
   }
 

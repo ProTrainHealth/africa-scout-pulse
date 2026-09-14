@@ -25,6 +25,14 @@ function mockPrice(companyId: string, previous: number, day: string): number {
   return Math.max(0.01, Math.round(next * 100) / 100);
 }
 
+
+async function setJobState(supabase: any, job: string, patch: Record<string, unknown>) {
+  await supabase.from('job_state').upsert(
+    { job_name: job, updated_at: new Date().toISOString(), ...patch },
+    { onConflict: 'job_name' },
+  );
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
@@ -34,6 +42,7 @@ Deno.serve(async (req) => {
   if (!auth.ok) return json({ error: 'Unauthorized' }, 401);
 
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, serviceKey);
+  await setJobState(supabase, 'price-phantom-portfolio', { last_run_at: new Date().toISOString(), last_error: null });
 
   const { data: positions, error: readError } = await supabase
     .from('phantom_portfolio')
@@ -41,6 +50,7 @@ Deno.serve(async (req) => {
 
   if (readError) {
     console.error('[price-phantom-portfolio] read failed', readError.message);
+    await setJobState(supabase, 'price-phantom-portfolio', { last_error: 'An internal error occurred.' });
     return json({ error: 'An internal error occurred.' }, 500);
   }
 
