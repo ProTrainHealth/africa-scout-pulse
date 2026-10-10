@@ -165,17 +165,10 @@ Deno.serve(async (req) => {
       const eventType = body.event_type
       const resource = body.resource
 
-      // Idempotency: skip duplicate deliveries
-      if (body.id) {
-        const { data: inserted, error: dupErr } = await supabaseAdmin.from('payment_events').upsert({
-          provider: 'paypal', provider_event_id: String(body.id), event_type: String(eventType), payload: body,
-        }, { onConflict: 'provider,provider_event_id,event_type', ignoreDuplicates: true }).select('id')
-        if (!dupErr && (!inserted || inserted.length === 0)) {
-          return new Response(JSON.stringify({ received: true, duplicate: true }), { headers: corsHeaders })
-        }
-      }
-
-      // Grant access only once funds are captured
+      // Grant access only once funds are captured.
+      // Idempotency key = PayPal order ID (stable across retries and shared with
+      // capture-paypal-order). The dedupe row is committed ONLY after the grant
+      // succeeds, so a failed write lets PayPal retry.
       if (eventType === 'PAYMENT.CAPTURE.COMPLETED') {
         const customId = resource?.custom_id ?? resource?.purchase_units?.[0]?.custom_id
         if (!customId) {
@@ -192,16 +185,44 @@ Deno.serve(async (req) => {
           return new Response(JSON.stringify({ received: true }), { headers: corsHeaders })
         }
 
-        const orderId = resource?.supplementary_data?.related_ids?.order_id ?? resource.id
-        await supabaseAdmin.from('subscriptions').upsert({
-          user_id: parsed.user_id,
-          plan: parsed.plan,
-          status: 'active',
-          payment_provider: 'paypal',
-          provider_subscription_id: orderId,
-          provider_customer_id: resource.payer?.payer_id || null,
-          current_period_end: periodEndFor(parsed.interval),
-        }, { onConflict: 'user_id' })
+        const orderId: string | undefined = resource?.supplementary_data?.related_ids?.order_id ?? resource?.id
+        if (!orderId) return new Response(JSON.stringify({ received: true }), { headers: corsHeaders })
+
+        const { data: seen, error: seenErr } = await supabaseAdmin.from('payment_events')
+          .select('id').eq('provider', 'paypal').eq('provider_event_id', orderId)
+          .eq('event_type', 'PAYMENT.CAPTURE.COMPLETED').maybeSingle()
+        if (seenErr) return jsonError(500, 'Dedupe lookup failed')
+        if (seen) {
+          return new Response(JSON.stringify({ received: true, duplicate: true }), { headers: corsHeaders })
+        }
+
+        // Downgrade guard: never replace an active Boardroom plan with Analyst.
+        const { data: existing } = await supabaseAdmin.from('subscriptions')
+          .select('plan,status,current_period_end').eq('user_id', parsed.user_id).maybeSingle()
+        const hasActiveBoardroom = existing?.plan === 'boardroom' && existing.status === 'active' &&
+          (!existing.current_period_end || new Date(existing.current_period_end) > new Date())
+
+        if (!(hasActiveBoardroom && parsed.plan !== 'boardroom')) {
+          const { error: grantErr } = await supabaseAdmin.from('subscriptions').upsert({
+            user_id: parsed.user_id,
+            plan: parsed.plan,
+            status: 'active',
+            payment_provider: 'paypal',
+            provider_subscription_id: orderId,
+            provider_customer_id: resource.payer?.payer_id || null,
+            current_period_end: periodEndFor(parsed.interval),
+          }, { onConflict: 'user_id' })
+          if (grantErr) {
+            console.error('[payment-webhook] grant failed', grantErr)
+            return jsonError(500, 'Grant failed') // no dedupe row → PayPal retries
+          }
+        }
+
+        const { error: evErr } = await supabaseAdmin.from('payment_events').upsert({
+          provider: 'paypal', provider_event_id: orderId, event_type: 'PAYMENT.CAPTURE.COMPLETED',
+          user_id: parsed.user_id, payload: body,
+        }, { onConflict: 'provider,provider_event_id,event_type', ignoreDuplicates: true })
+        if (evErr) console.error('[payment-webhook] dedupe record failed (grant already applied)', evErr)
       }
 
       // Cancellation, suspension, expiration, payment failure
