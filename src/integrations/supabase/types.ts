@@ -461,6 +461,36 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_events: {
+        Row: {
+          created_at: string | null
+          event_type: string
+          id: string
+          payload: Json | null
+          provider: string
+          provider_event_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_type: string
+          id?: string
+          payload?: Json | null
+          provider: string
+          provider_event_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json | null
+          provider?: string
+          provider_event_id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       phantom_portfolio: {
         Row: {
           company_id: string
