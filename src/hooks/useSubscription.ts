@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -22,54 +22,30 @@ export const useSubscription = () => {
   const { user, loading: authLoading } = useAuth();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
+  const userId = user?.id;
+
+  const refetch = useCallback(async (): Promise<Subscription | null> => {
+    if (!userId) {
+      setSubscription(null);
+      setLoading(false);
+      return null;
+    }
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .maybeSingle();
+    const sub = !error && data ? (data as Subscription) : null;
+    setSubscription(sub);
+    setLoading(false);
+    return sub;
+  }, [userId]);
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
-      setSubscription(null);
-      setLoading(false);
-      return;
-    }
-
-    const fetchSubscription = async () => {
-      const { data, error } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .maybeSingle();
-
-      if (!error && data) {
-        setSubscription(data as Subscription);
-      } else {
-        setSubscription(null);
-      }
-      setLoading(false);
-    };
-
-    fetchSubscription();
-
-    // Realtime subscription updates
-    const channel = supabase
-      .channel('subscription-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'subscriptions',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          fetchSubscription();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, authLoading]);
+    void refetch();
+  }, [authLoading, refetch]);
 
   const isActive = !!subscription && subscription.status === 'active' &&
     (!subscription.current_period_end || new Date(subscription.current_period_end) > new Date());
@@ -79,5 +55,6 @@ export const useSubscription = () => {
     isActive,
     plan: subscription?.plan ?? null,
     loading: loading || authLoading,
+    refetch,
   };
 };

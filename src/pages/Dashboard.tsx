@@ -75,32 +75,56 @@ const DashSkeleton = () => (
 
 const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
-  const { loading: subLoading, isActive, plan } = useSubscription();
+  const { loading: subLoading, isActive, plan, refetch } = useSubscription();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
 
   // Post-payment return: providers redirect to /dashboard?payment=success
   useEffect(() => {
     const payment = searchParams.get('payment');
-    if (!payment) return;
-
-    if (payment === 'success') {
-      toast({
-        title: 'Payment received',
-        description: isActive
-          ? `Your ${plan === 'boardroom' ? 'Boardroom' : 'Analyst'} access is live.`
-          : 'Activating your access — this updates automatically within a few seconds.',
-      });
-    } else if (payment === 'canceled') {
-      toast({ title: 'Checkout canceled', description: 'No payment was taken.', variant: 'destructive' });
-    }
+    if (!payment || authLoading || !user) return;
+    const provider = searchParams.get('provider');
+    const token = searchParams.get('token');
 
     const next = new URLSearchParams(searchParams);
-    next.delete('payment');
-    next.delete('provider');
-    next.delete('reference');
-    next.delete('trxref');
+    ['payment', 'provider', 'reference', 'trxref', 'token', 'PayerID'].forEach((k) => next.delete(k));
     setSearchParams(next, { replace: true });
+
+    if (payment === 'canceled') {
+      toast({ title: 'Checkout canceled', description: 'No payment was taken.', variant: 'destructive' });
+      return;
+    }
+    if (payment !== 'success') return;
+
+    let cancelled = false;
+    const pollForActivation = async () => {
+      for (let i = 0; i < 8 && !cancelled; i++) {
+        const sub = await refetch();
+        if (sub) {
+          toast({ title: 'Payment received', description: `Your ${sub.plan === 'boardroom' ? 'Boardroom' : 'Analyst'} access is live.` });
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      if (!cancelled) toast({ title: 'Payment processing', description: 'Your access will activate shortly. Refresh in a minute.' });
+    };
+
+    (async () => {
+      if (provider === 'paypal') {
+        if (!token) {
+          toast({ title: 'Payment not confirmed', description: 'Missing PayPal order reference.', variant: 'destructive' });
+          return;
+        }
+        const { error } = await supabase.functions.invoke('capture-paypal-order', { body: { order_id: token } });
+        if (error) {
+          toast({ title: 'Payment not completed', description: 'We could not confirm your PayPal payment. No access was granted.', variant: 'destructive' });
+          return;
+        }
+      }
+      await pollForActivation();
+    })();
+
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

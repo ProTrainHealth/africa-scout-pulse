@@ -136,7 +136,7 @@ const DashboardLayout = () => {
             <SheetContent side="left" className="w-64 p-0">
               <SheetTitle className="sr-only">Navigation</SheetTitle>
               <div className="flex h-full flex-col pt-12">
-                <SidebarNav expanded onNavigate={() => setMobileOpen(false)} />
+                <SidebarNav expanded onNavigate={() => setMobileOpen(false)} isAdmin={isAdmin} />
                 <Footer expanded />
               </div>
             </SheetContent>

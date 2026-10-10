@@ -165,8 +165,19 @@ Deno.serve(async (req) => {
       const eventType = body.event_type
       const resource = body.resource
 
-      if (eventType === 'PAYMENT.CAPTURE.COMPLETED' || eventType === 'CHECKOUT.ORDER.APPROVED') {
-        const customId = resource?.purchase_units?.[0]?.custom_id
+      // Idempotency: skip duplicate deliveries
+      if (body.id) {
+        const { data: inserted, error: dupErr } = await supabaseAdmin.from('payment_events').upsert({
+          provider: 'paypal', provider_event_id: String(body.id), event_type: String(eventType), payload: body,
+        }, { onConflict: 'provider,provider_event_id,event_type', ignoreDuplicates: true }).select('id')
+        if (!dupErr && (!inserted || inserted.length === 0)) {
+          return new Response(JSON.stringify({ received: true, duplicate: true }), { headers: corsHeaders })
+        }
+      }
+
+      // Grant access only once funds are captured
+      if (eventType === 'PAYMENT.CAPTURE.COMPLETED') {
+        const customId = resource?.custom_id ?? resource?.purchase_units?.[0]?.custom_id
         if (!customId) {
           return new Response(JSON.stringify({ received: true }), { headers: corsHeaders })
         }
@@ -177,14 +188,17 @@ Deno.serve(async (req) => {
         } catch {
           return new Response(JSON.stringify({ received: true }), { headers: corsHeaders })
         }
+        if (!['analyst', 'boardroom'].includes(parsed.plan)) {
+          return new Response(JSON.stringify({ received: true }), { headers: corsHeaders })
+        }
 
-
+        const orderId = resource?.supplementary_data?.related_ids?.order_id ?? resource.id
         await supabaseAdmin.from('subscriptions').upsert({
           user_id: parsed.user_id,
           plan: parsed.plan,
           status: 'active',
           payment_provider: 'paypal',
-          provider_subscription_id: resource.id,
+          provider_subscription_id: orderId,
           provider_customer_id: resource.payer?.payer_id || null,
           current_period_end: periodEndFor(parsed.interval),
         }, { onConflict: 'user_id' })
@@ -200,9 +214,9 @@ Deno.serve(async (req) => {
         const subscriptionId = resource?.id
         if (subscriptionId) {
           const newStatus =
-            eventType === 'BILLING.SUBSCRIPTION.PAYMENT.FAILED' ? 'past_due'
-            : eventType === 'BILLING.SUBSCRIPTION.SUSPENDED' ? 'paused'
-            : 'canceled'
+            eventType === 'BILLING.SUBSCRIPTION.PAYMENT.FAILED' || eventType === 'BILLING.SUBSCRIPTION.SUSPENDED'
+              ? 'past_due'
+              : 'canceled'
           await supabaseAdmin.from('subscriptions')
             .update({
               status: newStatus,
