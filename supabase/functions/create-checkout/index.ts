@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
       return jsonError(500, 'Failed to create payment order')
     }
 
-    return new Response(JSON.stringify({ url: approveLink.href, provider: 'paypal' }), {
+    return new Response(JSON.stringify({ url: approveLink.href, provider: 'paypal', order_id: orderData.id }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
 
