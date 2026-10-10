@@ -47,6 +47,21 @@ Deno.serve(async (req) => {
     if (!access_token) return json(502, { error: 'Payment provider auth failed' })
     const ppHeaders = { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' }
 
+    const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+    const currentSub = async () => (await admin.from('subscriptions')
+      .select('plan,status,current_period_end').eq('user_id', user.id).maybeSingle()).data
+
+    // Server-side idempotency: already processed → return state, don't extend period.
+    const { data: seen, error: seenErr } = await admin.from('payment_events')
+      .select('user_id').eq('provider', 'paypal').eq('provider_event_id', orderId)
+      .eq('event_type', 'PAYMENT.CAPTURE.COMPLETED').maybeSingle()
+    if (seenErr) return json(500, { error: 'Idempotency lookup failed' })
+    if (seen) {
+      if (seen.user_id && seen.user_id !== user.id) return json(403, { error: 'Order does not belong to this account' })
+      const sub = await currentSub()
+      return json(200, { ok: true, already_processed: true, plan: sub?.plan ?? null, subscription: sub })
+    }
+
     const orderRes = await fetch(`${baseUrl}/v2/checkout/orders/${orderId}`, { headers: ppHeaders })
     if (!orderRes.ok) return json(404, { error: 'Order not found' })
     let order = await orderRes.json()
@@ -71,19 +86,27 @@ Deno.serve(async (req) => {
     }
     if (order.status !== 'COMPLETED') return json(409, { error: `Order not payable (status ${order.status})` })
 
-    const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+    // Downgrade guard: keep an active Boardroom plan.
+    const existing = await currentSub()
+    const hasActiveBoardroom = existing?.plan === 'boardroom' && existing.status === 'active' &&
+      (!existing.current_period_end || new Date(existing.current_period_end) > new Date())
+
+    if (!(hasActiveBoardroom && plan !== 'boardroom')) {
+      const { error } = await admin.from('subscriptions').upsert({
+        user_id: user.id, plan, status: 'active', payment_provider: 'paypal',
+        provider_subscription_id: orderId, provider_customer_id: order.payer?.payer_id ?? null,
+        current_period_end: periodEndFor(interval),
+      }, { onConflict: 'user_id' })
+      if (error) { console.error('[capture-paypal-order] upsert', error); return json(500, { error: 'Could not activate subscription' }) }
+    }
+
+    // Commit dedupe row only after a successful grant (shared key with payment-webhook).
     await admin.from('payment_events').upsert({
-      provider: 'paypal', provider_event_id: orderId, event_type: 'ORDER.CAPTURED', user_id: user.id, payload: order,
+      provider: 'paypal', provider_event_id: orderId, event_type: 'PAYMENT.CAPTURE.COMPLETED', user_id: user.id, payload: order,
     }, { onConflict: 'provider,provider_event_id,event_type', ignoreDuplicates: true })
 
-    const { error } = await admin.from('subscriptions').upsert({
-      user_id: user.id, plan, status: 'active', payment_provider: 'paypal',
-      provider_subscription_id: orderId, provider_customer_id: order.payer?.payer_id ?? null,
-      current_period_end: periodEndFor(interval),
-    }, { onConflict: 'user_id' })
-    if (error) { console.error('[capture-paypal-order] upsert', error); return json(500, { error: 'Could not activate subscription' }) }
-
-    return json(200, { ok: true, plan })
+    const sub = await currentSub()
+    return json(200, { ok: true, plan: sub?.plan ?? plan, downgrade_blocked: hasActiveBoardroom && plan !== 'boardroom' })
   } catch (err) {
     console.error('[capture-paypal-order]', err)
     return json(500, { error: 'An internal error occurred.' })
