@@ -75,7 +75,7 @@ const DashSkeleton = () => (
 
 const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
-  const { loading: subLoading, isActive, plan, refetch } = useSubscription();
+  const { loading: subLoading, refetch } = useSubscription();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
 
